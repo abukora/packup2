@@ -861,16 +861,45 @@ const LS_SETUP_DONE = 'hosoon_setup_done';  // '1'
 // نفس المنطق الموجود في renderPlan
 
 function getPlanForDay(dayIndex) {
-    let cumulative = 0;
-    for (let i = 0; i < courses.length; i++) {
-        const lessonsCount = courses[i].lessons.length;
-        const weeksNeeded = Math.ceil(lessonsCount / 6);
-        cumulative += weeksNeeded;
-        if (dayIndex < cumulative * 6) {
-            return [courses[i], courses[i], courses[i]];
+    // 1. بناء قائمة مسطحة بجميع الدروس مرتبة حسب تسلسل الكراسات (الكراسة 1 ثم 2 ثم 3 ...)
+    const flatLessons = [];
+    courses.forEach((course) => {
+        course.lessons.forEach((lesson) => {
+            flatLessons.push({
+                course: course,
+                lesson: lesson
+            });
+        });
+    });
+
+    const totalLessons = flatLessons.length;   // إجمالي عدد الدروس (~146 درساً)
+    const totalDays = 45;                      // المدة المستهدفة بالايام
+    const lessonsPerDay = Math.ceil(totalLessons / totalDays); // عدد الدروس اليومية (~4)
+
+    // 2. تحديد نطاق الدروس التي ستُفتح اليوم
+    const start = dayIndex * lessonsPerDay;
+    const end = Math.min(start + lessonsPerDay, totalLessons);
+
+    // 3. استخراج الكراسات الفريدة التي تحتوي على هذه الدروس
+    const uniqueCourses = [];
+    const seenIds = new Set();
+    for (let i = start; i < end; i++) {
+        const course = flatLessons[i].course;
+        if (!seenIds.has(course.id)) {
+            seenIds.add(course.id);
+            uniqueCourses.push(course);
         }
     }
-    return [courses[0], courses[0], courses[0]];
+
+    // 4. التأكد من وجود 3 عناصر (كما يتوقع نظام العرض في الصفحة الرئيسية)
+    //    إذا كان اليوم يحتوي على كراسة واحدة فقط، نكررها 3 مرات.
+    //    إذا كان يحتوي على كراستين، نضيف كراسة ثالثة (الأولى) لملء الفراغ.
+    while (uniqueCourses.length < 3) {
+        uniqueCourses.push(uniqueCourses[uniqueCourses.length - 1] || courses[0]);
+    }
+
+    // 5. إرجاع أول 3 كراسات فقط (لضمان عدم تجاوز العدد المطلوب)
+    return uniqueCourses.slice(0, 3);
 }
 // تحويل تاريخ إلى string YYYY-MM-DD بالتوقيت المحلي
 function toLocalDateStr(date) {
