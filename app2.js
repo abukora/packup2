@@ -1,6 +1,88 @@
 // ================================================================
-// 2. الجدول الأسبوعي — WEEKLY_SCHEDULE (5 أسابيع × 6 أيام × 3 كراسات)
+// 1. البيانات – هيكلة متقدمة مع أقسام منظمة
 // ================================================================
+
+/**
+ * دالة محسّنة لتحليل محتوى HTML واستخراج أقسام منظمة
+ * تعالج وجود وسوم <strong> وتستخرج النصوص الصحيحة
+ */
+function parseSectionsFromContent(htmlText) {
+    const sections = [];
+    const div = document.createElement('div');
+    div.innerHTML = htmlText;
+
+    // الحصول على جميع الفقرات
+    const paragraphs = div.querySelectorAll('p');
+    
+    const typeMap = {
+        'الفقرة الأساسية': 'paragraph',
+        'الفقرة': 'paragraph',
+        'الدليل': 'quote',
+        'الشرح': 'explanation',
+        'النموذج التطبيقي': 'application',
+        'النموذج': 'application',
+        'الفائدة': 'benefit'
+    };
+
+    paragraphs.forEach(p => {
+        // الحصول على النص الكامل للفقرة بدون وسوم
+        const fullText = p.textContent.trim();
+        if (!fullText) return;
+
+        // أولاً: محاولة استخراج النوع من خلال عنصر strong إن وجد
+        const strongEl = p.querySelector('strong');
+        let matchedType = null;
+        let contentText = fullText;
+        
+        if (strongEl) {
+            const strongText = strongEl.textContent.trim();
+            // إزالة النقطتين إذا وجدت في النهاية
+            const cleanStrong = strongText.replace(/:$/, '').trim();
+            
+            for (const [key, type] of Object.entries(typeMap)) {
+                if (cleanStrong === key) {
+                    matchedType = type;
+                    // إزالة النص القوي والنقطتين اللاحقتين من النص الكامل
+                    const regex = new RegExp(strongText + '\s*:?\s*');
+                    contentText = fullText.replace(regex, '').trim();
+                    break;
+                }
+            }
+        }
+        
+        // إذا لم نجد تطابقاً مع strong، نحاول مع النص الكامل مباشرة
+        if (!matchedType) {
+            for (const [key, type] of Object.entries(typeMap)) {
+                if (fullText.startsWith(key + ':')) {
+                    matchedType = type;
+                    contentText = fullText.substring(key.length + 1).trim();
+                    break;
+                }
+            }
+        }
+
+        const section = { type: matchedType || 'paragraph', content: contentText || fullText };
+
+        // التعامل مع المصدر للاقتباسات
+        if (section.type === 'quote') {
+            const sourceMatch = section.content.match(/\(([^)]+)\)/);
+            if (sourceMatch) {
+                section.source = sourceMatch[1];
+                section.content = section.content.replace(/\([^)]+\)/, '').trim();
+            }
+        }
+
+        sections.push(section);
+    });
+
+    // إذا لم نتمكن من تحليل أي أقسام، نعيد فقرة واحدة
+    if (sections.length === 0 && div.textContent.trim()) {
+        sections.push({ type: 'paragraph', content: div.textContent.trim() });
+    }
+
+    return sections;
+}
+
 // البيانات الخام (نفس الهيكل السابق)
 const rawCourses = [{
     id: 1,
@@ -741,6 +823,7 @@ const rawCourses = [{
   ]
 }   ];
 
+
 // معالجة كل درس: تحويل content إلى مصفوفة sections
 const courses = rawCourses.map(course => {
     const newLessons = course.lessons.map(lesson => {
@@ -757,51 +840,34 @@ const courses = rawCourses.map(course => {
     };
 });
 
-/**
- * توزيع الـ 11 كراسة على 5 أسابيع × 6 أيام = 30 يوم
- * كل يوم يحتوي على 3 كراسات مختلفة (لا تتكرر في نفس اليوم).
- * كل كراسة تظهر 3 مرات أو 4 مرات بشكل متوازن.
- * الترتيب مبني على نظام دوران Latin Square لضمان التوزيع المتوازن.
- */
-function buildWeeklySchedule() {
-    // الـ 11 معرّف للكراسات (ids: 1..11)
-    const ids = [1,2,3,4,5,6,7,8,9,10,11];
-    // كل يوم دراسي (0-29) نختار 3 كراسات بحيث:
-    //   - لا تتكرر في نفس اليوم
-    //   - تتوزع بالتساوي عبر الأسابيع
-    // نستخدم نمط دوران منظم
-    const schedule = []; // 30 يوم، كل يوم 3 ids
+// ================================================================
+// 2. إدارة الحالة
+// ================================================================
+let currentSection = 'home';
+let currentCourseId = null;
+let currentLessonIndex = 0;
+const appContainer = document.getElementById('appContainer');
 
-    // بناء مصفوفة التوزيع يدوياً لضمان عدم التكرار في اليوم الواحد
-    // واحدة = [i1, i2, i3] حيث i1≠i2≠i3 وتدور عبر 30 يوم
-    // الفكرة: نستخدم ثلاث قوائم متداولة A/B/C، كل مجموعة تمثل موقعاً
-    // A: 1,2,3,4,5,6,7,8,9,10,11,1,2,...  (تدور بخطوة 1)
-    // B: A[i]+4 mod 11
-    // C: A[i]+7 mod 11
-    // نتحقق من عدم التكرار في كل يوم
+// ================================================================
+// A. نظام الإعداد والترحيب — Setup & Welcome System
+// ================================================================
 
-    for (let day = 0; day < 30; day++) {
-        const a = ids[day % 11];
-        const b = ids[(day + 4) % 11];
-        const c = ids[(day + 7) % 11];
-        schedule.push([a, b, c]);
-    }
-    return schedule;
-}
+// مفاتيح localStorage
+const LS_MODE       = 'hosoon_mode';        // 'course' | 'free'
+const LS_START_DATE = 'hosoon_start_date';  // 'YYYY-MM-DD'
+const LS_SETUP_DONE = 'hosoon_setup_done';  // '1'
 
-const DAILY_SCHEDULE = buildWeeklySchedule(); // مصفوفة 30 عنصر، كل عنصر [id1,id2,id3]
-
-/**
- * يُعيد قائمة الكراسات الثلاث المقررة ليوم دراسي معين (0-based).
- */
+// خطة التدريس: 30 يوم دراسي (كل يوم 3 كراسات كما في renderPlan)
+// نفس المنطق الموجود في renderPlan
 function getPlanForDay(dayIndex) {
-    const i = Math.max(0, Math.min(dayIndex, 29));
-    return DAILY_SCHEDULE[i].map(id => courses.find(c => c.id === id)).filter(Boolean);
+    // dayIndex من 0 إلى 29 (اليوم الدراسي لا التقويمي)
+    const i = dayIndex;
+    return [
+        courses[i % courses.length],
+        courses[(i + 3) % courses.length],
+        courses[(i + 6) % courses.length]
+    ];
 }
-
-// ================================================================
-// 3. دوال حساب الوقت — زمن الأسابيع
-// ================================================================
 
 // تحويل تاريخ إلى string YYYY-MM-DD بالتوقيت المحلي
 function toLocalDateStr(date) {
@@ -811,103 +877,57 @@ function toLocalDateStr(date) {
     return `${y}-${m}-${d}`;
 }
 
-/**
- * احسب عدد الأيام الدراسية المنقضية (0-based) مع تجاهل أيام الجمعة.
- * يوم السبت الأول = اليوم الدراسي 0.
- */
+// احسب اليوم الدراسي الحالي (0-based, مع تجاهل الجمعات)
 function calcStudyDay(startDateStr) {
     const start = new Date(startDateStr + 'T00:00:00');
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     start.setHours(0, 0, 0, 0);
-    if (today < start) return -1;
+    if (today < start) return -1; // لم تبدأ بعد
 
     let studyDays = 0;
     const cur = new Date(start);
     while (cur <= today) {
         const dow = cur.getDay(); // 0=Sun,5=Fri,6=Sat
-        if (dow !== 5) studyDays++; // الجمعة = 5، تُستثنى
+        if (dow !== 5) studyDays++; // الجمعة = 5
         if (toLocalDateStr(cur) === toLocalDateStr(today)) break;
         cur.setDate(cur.getDate() + 1);
     }
     return studyDays - 1; // 0-based
 }
 
-// هل اليوم جمعة؟
+// هل يوم الجمعة؟
 function isTodayFriday() {
     return new Date().getDay() === 5;
 }
 
-// عدد الأيام الدراسية المكتملة (لا تشمل اليوم الحالي إن كان دراسياً بعد)
+// احسب أيام الدراسة المكتملة حتى الآن
 function completedStudyDays(startDateStr) {
     return Math.max(0, calcStudyDay(startDateStr));
 }
 
-/**
- * الأسبوع الحالي (0-based, 0..4)
- */
-function getCurrentWeek(startDateStr) {
-    const sd = calcStudyDay(startDateStr);
-    if (sd < 0) return 0;
-    return Math.min(Math.floor(sd / 6), 4);
-}
-
-/**
- * اليوم داخل الأسبوع الحالي (0=السبت .. 5=الخميس)
- */
-function getCurrentDayInWeek(startDateStr) {
-    const sd = calcStudyDay(startDateStr);
-    if (sd < 0) return 0;
-    return sd % 6;
-}
-
-// ================================================================
-// 4. منطق فتح الدروس — نظام الأسابيع
-// ================================================================
-
-/**
- * عدد الدروس المفتوحة في كراسة معينة بناءً على رقم الأسبوع الحالي.
- * الأسبوع 0 → درس واحد، الأسبوع 1 → درسان، ... الأسبوع 4 → 5 دروس.
- */
-function getUnlockedLessonCount(courseId, currentStudyDay) {
-    const course = courses.find(c => c.id === courseId);
-    if (!course) return 0;
-    const totalLessons = course.lessons.length;
-
-    const mode = localStorage.getItem(LS_MODE);
-    if (mode !== 'course') return totalLessons; // وضع حر
-
-    if (currentStudyDay < 0) return 0;
-
-    const currentWeek = Math.min(Math.floor(currentStudyDay / 6), 4);
-    const unlocked = currentWeek + 1; // أسبوع 0 → 1 درس، أسبوع 4 → 5 دروس
-    return Math.min(unlocked, totalLessons);
-}
-
-/**
- * هل الكراسة مفتوحة (ظهرت في الجدول حتى اليوم الحالي)؟
- */
+// ما هي الكراسات المتاحة اليوم في وضع الدورة؟
 function getUnlockedCourseIds() {
     const mode = localStorage.getItem(LS_MODE);
-    if (mode !== 'course') return courses.map(c => c.id);
+    if (mode !== 'course') return courses.map(c => c.id); // كل شيء مفتوح
 
     const startDate = localStorage.getItem(LS_START_DATE);
     if (!startDate) return [];
 
     if (isTodayFriday()) {
-        // الجمعة: تُفتح كل كراسات ظهرت في الأسبوع الحالي وما قبله
-        const sd = completedStudyDays(startDate);
+        // الجمعة: تُفتح كل الدروس السابقة للمراجعة
+        const todayStudyDay = completedStudyDays(startDate);
         const unlocked = new Set();
-        for (let d = 0; d <= Math.min(sd, 29); d++) {
+        for (let d = 0; d <= todayStudyDay; d++) {
             getPlanForDay(d).forEach(c => unlocked.add(c.id));
         }
         return [...unlocked];
     }
 
-    const sd = calcStudyDay(startDate);
-    if (sd < 0) return [];
+    const todayStudyDay = calcStudyDay(startDate);
+    if (todayStudyDay < 0) return []; // لم تبدأ
     const unlocked = new Set();
-    for (let d = 0; d <= Math.min(sd, 29); d++) {
+    for (let d = 0; d <= Math.min(todayStudyDay, 29); d++) {
         getPlanForDay(d).forEach(c => unlocked.add(c.id));
     }
     return [...unlocked];
@@ -917,111 +937,272 @@ function isCourseUnlocked(courseId) {
     return getUnlockedCourseIds().includes(courseId);
 }
 
+// ================================================================
+// نظام فتح الدروس التدريجي — Progressive Lesson Unlocking
+// ================================================================
+
+/**
+ * getTotalAppearances(courseId)
+ * تحسب عدد المرات التي تظهر فيها الكراسة في خطة الـ 30 يوماً كاملة
+ */
+function getTotalAppearances(courseId) {
+    let count = 0;
+    for (let d = 0; d < 30; d++) {
+        const dayCourses = getPlanForDay(d);
+        if (dayCourses.some(c => c.id === courseId)) count++;
+    }
+    return count;
+}
+
+/**
+ * getAppearancesSoFar(courseId, currentStudyDay)
+ * تحسب عدد مرات ظهور الكراسة من اليوم 0 إلى currentStudyDay (شامل)
+ */
+function getAppearancesSoFar(courseId, currentStudyDay) {
+    let count = 0;
+    const upTo = Math.min(currentStudyDay, 29);
+    for (let d = 0; d <= upTo; d++) {
+        const dayCourses = getPlanForDay(d);
+        if (dayCourses.some(c => c.id === courseId)) count++;
+    }
+    return count;
+}
+
+/**
+ * getUnlockedLessonCount(courseId, currentStudyDay)
+ * تحسب عدد الدروس المفتوحة بناءً على تقدم الطالب في الخطة.
+ * - وضع "free": كل الدروس مفتوحة.
+ * - وضع "course": يُفتح الدرس الأول فور ظهور الكراسة لأول مرة،
+ *   ثم تزداد الدروس تدريجياً حتى تكتمل في آخر يوم تظهر فيه.
+ */
+function getUnlockedLessonCount(courseId, currentStudyDay) {
+    const course = courses.find(c => c.id === courseId);
+    if (!course) return 0;
+    const totalLessons = course.lessons.length;
+
+    const mode = localStorage.getItem(LS_MODE);
+    if (mode !== 'course') return totalLessons; // وضع حر: كل شيء مفتوح
+
+    if (currentStudyDay < 0) return 0;
+
+    const total = getTotalAppearances(courseId);
+    if (total === 0) return 0;
+
+    // نضمن فتح درس واحد على الأقل عند أول ظهور
+    const appearancesSoFar = getAppearancesSoFar(courseId, currentStudyDay);
+    if (appearancesSoFar === 0) return 0;
+
+    // في آخر يوم ظهور: نفتح كل الدروس
+    if (appearancesSoFar >= total) return totalLessons;
+
+    // المعادلة: (ظهور حتى الآن / إجمالي الظهور) * إجمالي الدروس
+    // مع ضمان درس واحد على الأقل عند أول ظهور
+    const calculated = Math.floor((appearancesSoFar / total) * totalLessons);
+    return Math.min(Math.max(calculated, 1), totalLessons);
+}
+
+/**
+ * getCurrentStudyDayForUnlocking()
+ * يجلب اليوم الدراسي الحالي من localStorage
+ */
 function getCurrentStudyDayForUnlocking() {
     const startDate = localStorage.getItem(LS_START_DATE);
     if (!startDate) return -1;
     return calcStudyDay(startDate);
 }
 
-// ================================================================
-// نظام الترحيب والإعداد (Welcome Modal) — يبقى كما هو مع تعديل النصوص
-// ================================================================
+// ----------------------------------------------------------------
+// منطق نافذة الترحيب
+// ----------------------------------------------------------------
+let selectedMode = null;
+
 function showWelcomeModal() {
-    document.getElementById('welcomeModal').style.display = 'flex';
-}
-function closeWelcomeModal() {
-    document.getElementById('welcomeModal').style.display = 'none';
+    const ov = document.getElementById('welcomeOverlay');
+    if (ov) ov.style.display = 'flex';
+    // ضبط تاريخ اليوم كقيمة افتراضية
+    const picker = document.getElementById('startDatePicker');
+    if (picker) picker.value = toLocalDateStr(new Date());
 }
 
-let currentStep = 1;
-function goToStep(step) {
-    currentStep = step;
-    document.querySelectorAll('.welcome-step').forEach(el => {
-        el.style.display = 'none';
-    });
-    const s = document.getElementById(`step${step}`);
-    if (s) s.style.display = 'block';
+function hideWelcomeModal() {
+    const ov = document.getElementById('welcomeOverlay');
+    if (ov) {
+        ov.style.opacity = '0';
+        ov.style.transition = 'opacity 0.4s';
+        setTimeout(() => { ov.style.display = 'none'; ov.style.opacity = ''; ov.style.transition = ''; }, 400);
+    }
 }
+
 function selectMode(mode) {
-    localStorage.setItem(LS_MODE, mode);
-    if (mode === 'free') {
-        localStorage.setItem(LS_SETUP_DONE, '1');
-        closeWelcomeModal();
-        navigateTo('home');
-        updateModeBadge();
+    selectedMode = mode;
+    // إزالة selected من كل الخيارات
+    document.querySelectorAll('.wc-option').forEach(o => o.classList.remove('selected'));
+    document.querySelectorAll('.opt-check').forEach(c => { c.innerHTML = ''; });
+
+    const optEl = document.getElementById('opt-' + mode);
+    const checkEl = document.getElementById('check-' + mode);
+    if (optEl) optEl.classList.add('selected');
+    if (checkEl) checkEl.innerHTML = '<i class="fas fa-check" style="font-size:0.7rem;color:#000;"></i>';
+
+    // إظهار الأزرار المناسبة
+    const btnNext = document.getElementById('btn-step1-next');
+    const btnFree = document.getElementById('btn-step1-free');
+    if (mode === 'course') {
+        if (btnNext) btnNext.style.display = 'block';
+        if (btnFree) btnFree.style.display = 'none';
     } else {
-        goToStep(2);
+        if (btnNext) btnNext.style.display = 'none';
+        if (btnFree) btnFree.style.display = 'block';
     }
 }
 
-function confirmDate() {
-    const picker = document.getElementById('startDatePicker');
-    if (!picker || !picker.value) return;
-    localStorage.setItem(LS_START_DATE, picker.value);
-    goToStep(3);
+function goToStep(step) {
+    // تحديث المحتوى
+    [1, 2, 3].forEach(s => {
+        const el = document.getElementById('wc-step-' + s);
+        if (el) el.classList.toggle('visible', s === step);
+    });
 
-    const startDate = picker.value;
-    const todayStudyDay = calcStudyDay(startDate);
-    const week = getCurrentWeek(startDate);
-    const dayInWeek = getCurrentDayInWeek(startDate);
+    // تحديث Stepper
+    [1, 2, 3].forEach(s => {
+        const item   = document.getElementById('step-item-' + s);
+        const circle = document.getElementById('step-circle-' + s);
+        const line   = document.getElementById('step-line-' + s);
+        if (!item || !circle) return;
 
-    const dayNames = ['السبت','الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس'];
-    const previewEl = document.getElementById('planPreview');
-    if (previewEl) {
-        if (isTodayFriday()) {
-            previewEl.innerHTML = `<p style="text-align:center;color:var(--gold);">🌙 اليوم جمعة — يوم المراجعة والراحة</p>`;
-        } else if (todayStudyDay >= 0) {
-            const todayCourses = getPlanForDay(todayStudyDay);
-            previewEl.innerHTML = `
-                <p style="margin-bottom:8px;color:var(--gold);">📅 <strong>الأسبوع ${week+1} — ${dayNames[dayInWeek]}</strong></p>
-                <p style="margin-bottom:10px;font-size:0.85rem;color:var(--text-light);">كراساتك اليوم:</p>
-                <ul style="list-style:none;padding:0;margin:0;">
-                    ${todayCourses.map(c => `<li style="padding:4px 0;"><i class="fas fa-book-open" style="color:var(--gold);margin-left:6px;"></i>${c.title}</li>`).join('')}
-                </ul>
-            `;
+        item.classList.remove('active', 'done');
+        circle.classList.remove('active', 'done');
+
+        if (s < step) {
+            item.classList.add('done');
+            circle.classList.add('done');
+            circle.innerHTML = '<i class="fas fa-check" style="font-size:0.7rem;"></i>';
+            if (line) { line.classList.remove('active'); line.classList.add('done'); }
+        } else if (s === step) {
+            item.classList.add('active');
+            circle.classList.add('active');
+            circle.textContent = s;
+            if (line) { line.classList.remove('done'); line.classList.add('active'); }
         } else {
-            previewEl.innerHTML = `<p style="text-align:center;color:var(--text-light);">📅 ستبدأ الدراسة في تاريخك المحدد</p>`;
+            circle.textContent = s;
+            if (line) { line.classList.remove('active', 'done'); }
         }
+    });
+
+    // إذا كانت الخطوة 3، نملأ التأكيد
+    if (step === 3) buildConfirmStep();
+}
+
+function onDateChange() {
+    const picker = document.getElementById('startDatePicker');
+    const btn = document.getElementById('btn-step2-next');
+    if (picker && picker.value && btn) {
+        btn.disabled = false;
+        btn.style.opacity = '1';
     }
 }
 
-function finishSetup() {
-    const picker = document.getElementById('startDatePicker');
-    const startDate = picker ? picker.value : localStorage.getItem(LS_START_DATE);
+function buildConfirmStep() {
+    const startDate = document.getElementById('startDatePicker').value;
     if (!startDate) return;
+
+    const start = new Date(startDate + 'T00:00:00');
+    // احسب تاريخ الانتهاء (45 يوماً دراسياً مع تجاهل الجمعات = ~53 يوماً تقويمياً)
+    let studyCount = 0;
+    const endDate = new Date(start);
+    while (studyCount < 45) {
+        if (endDate.getDay() !== 5) studyCount++;
+        if (studyCount < 45) endDate.setDate(endDate.getDate() + 1);
+    }
+
+    const dayNames = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+    const fmt = d => `${dayNames[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+
+    // ما هي دروس اليوم؟ (لو البداية اليوم = اليوم الدراسي 0)
+    const todayStudyDay = calcStudyDay(startDate);
+    let todayCoursesHtml = '';
+    if (todayStudyDay >= 0 && todayStudyDay <= 29) {
+        const todayCourses = getPlanForDay(todayStudyDay);
+        todayCoursesHtml = todayCourses.map(c =>
+            `<span class="wc-lesson-chip"><i class="fas fa-book-open"></i> ${c.title}</span>`
+        ).join('');
+    } else if (todayStudyDay < 0) {
+        todayCoursesHtml = `<span style="color:rgba(255,255,255,0.5);font-size:0.85rem;">ستبدأ دروسك يوم ${fmt(start)}</span>`;
+    }
+
+    document.getElementById('confirmSummary').innerHTML = `
+        <div class="wc-confirm-row">
+            <span class="cr-label"><i class="fas fa-play-circle" style="color:#2E8B57;margin-left:6px;"></i> تاريخ البداية</span>
+            <span class="cr-val">${fmt(start)}</span>
+        </div>
+        <div class="wc-confirm-row">
+            <span class="cr-label"><i class="fas fa-flag-checkered" style="color:#D4AF37;margin-left:6px;"></i> تاريخ الانتهاء</span>
+            <span class="cr-val">${fmt(endDate)}</span>
+        </div>
+        <div class="wc-confirm-row">
+            <span class="cr-label"><i class="fas fa-calendar-week" style="color:#9932CC;margin-left:6px;"></i> أيام الدراسة</span>
+            <span class="cr-val">6 أيام / أسبوع</span>
+        </div>
+        <div class="wc-confirm-row">
+            <span class="cr-label"><i class="fas fa-book" style="color:#1a73e8;margin-left:6px;"></i> عدد الكراسات</span>
+            <span class="cr-val">10 كراسات · 130 درساً</span>
+        </div>
+    `;
+
+    document.getElementById('todayLessonsPreview').innerHTML = `
+        <h4><i class="fas fa-sun"></i> ${todayStudyDay >= 0 ? 'دروسك اليوم:' : 'دروسك في اليوم الأول:'}</h4>
+        ${todayCoursesHtml || '<span style="color:rgba(255,255,255,0.5);font-size:0.85rem;">لا توجد دروس مجدولة اليوم</span>'}
+    `;
+}
+
+function launchFreeMode() {
+    localStorage.setItem(LS_MODE, 'free');
+    localStorage.setItem(LS_SETUP_DONE, '1');
+    hideWelcomeModal();
+    updateModeBadge();
+    navigateTo('home');
+}
+
+function launchCourseMode() {
+    const startDate = document.getElementById('startDatePicker').value;
+    if (!startDate) return;
+    localStorage.setItem(LS_MODE, 'course');
     localStorage.setItem(LS_START_DATE, startDate);
     localStorage.setItem(LS_SETUP_DONE, '1');
-    closeWelcomeModal();
-    navigateTo('home');
+    hideWelcomeModal();
     updateModeBadge();
+    // عرض رسالة الجمعة إن كان اليوم جمعة
+    if (isTodayFriday()) showFridayModal();
+    navigateTo('home');
 }
 
-function resetApp() {
-    ['LS_MODE','LS_START_DATE','LS_SETUP_DONE'].forEach(key => {
-        localStorage.removeItem(localStorage[key] || key);
-    });
-    // حذف مفاتيح localStorage مباشرة بالأسماء الثابتة
+function resetSetup() {
+    if (!confirm('هل تريد إعادة ضبط الإعدادات؟ سيتم الاحتفاظ بتقدمك في الدروس.')) return;
     localStorage.removeItem(LS_MODE);
     localStorage.removeItem(LS_START_DATE);
     localStorage.removeItem(LS_SETUP_DONE);
-    const el = document.getElementById('startDatePicker');
-    if (el) el.style.display = 'none';
+    selectedMode = null;
+    // إعادة ضبط الـ UI
+    document.querySelectorAll('.wc-option').forEach(o => o.classList.remove('selected'));
+    document.querySelectorAll('.opt-check').forEach(c => { c.innerHTML = ''; });
+    ['btn-step1-next','btn-step1-free'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
     goToStep(1);
     showWelcomeModal();
     updateModeBadge();
 }
 
-// ----------------------------------------------------------------
-// شريط البادج العلوي — يعرض "الأسبوع X من 5"
-// ----------------------------------------------------------------
 function updateModeBadge() {
     const badge = document.getElementById('modeBadge');
     if (!badge) return;
     const mode = localStorage.getItem(LS_MODE);
     if (mode === 'course') {
         const startDate = localStorage.getItem(LS_START_DATE);
-        const week = startDate ? Math.min(getCurrentWeek(startDate) + 1, 5) : 1;
-        badge.innerHTML = `<span class="mode-badge"><i class="fas fa-graduation-cap"></i> الأسبوع ${Math.max(1,week)} من 5</span>`;
+        const day = startDate ? Math.min(calcStudyDay(startDate) + 1, 45) : 1;
+        badge.innerHTML = `<span class="mode-badge"><i class="fas fa-graduation-cap"></i> يوم ${Math.max(1,day)} من 45</span>`;
     } else if (mode === 'free') {
         badge.innerHTML = `<span class="mode-badge free-mode"><i class="fas fa-search"></i> تصفح حر</span>`;
     } else {
@@ -1030,17 +1211,18 @@ function updateModeBadge() {
 }
 
 // ----------------------------------------------------------------
-// نافذة الجمعة — إحصائيات الأسبوع
+// نافذة الجمعة
 // ----------------------------------------------------------------
 function showFridayModal() {
     const mode = localStorage.getItem(LS_MODE);
     if (mode !== 'course') return;
 
     const startDate = localStorage.getItem(LS_START_DATE);
-    const week = startDate ? getCurrentWeek(startDate) + 1 : 1;
     const studyDay = startDate ? completedStudyDays(startDate) : 0;
 
-    let totalLessons = 0, completedLessons = 0;
+    // إحصائيات للعرض
+    let totalLessons = 0;
+    let completedLessons = 0;
     courses.forEach(course => {
         course.lessons.forEach((_, idx) => {
             totalLessons++;
@@ -1050,16 +1232,16 @@ function showFridayModal() {
 
     document.getElementById('fridayStats').innerHTML = `
         <div class="friday-stat">
-            <span class="fs-num">${week}</span>
-            <span class="fs-lbl">الأسبوع الحالي</span>
+            <span class="fs-num">${studyDay}</span>
+            <span class="fs-lbl">يوم دراسي مضى</span>
         </div>
         <div class="friday-stat">
             <span class="fs-num">${completedLessons}</span>
             <span class="fs-lbl">درس أتممته</span>
         </div>
         <div class="friday-stat">
-            <span class="fs-num">${Math.max(0, 5 - week)}</span>
-            <span class="fs-lbl">أسبوع متبقي</span>
+            <span class="fs-num">${Math.max(0, 45 - studyDay)}</span>
+            <span class="fs-lbl">يوم متبقي</span>
         </div>
     `;
 
@@ -1114,118 +1296,36 @@ function renderHome() {
 
     if (mode === 'course' && startDate) {
         const studyDay = calcStudyDay(startDate);
-        const week = getCurrentWeek(startDate);
-        const dayInWeek = getCurrentDayInWeek(startDate);
-        const dayNames = ['السبت','الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس'];
-
         if (isTodayFriday()) {
-            // ── يوم الجمعة: عرض المراجعة فقط ──
-            // نجمع كراسات الأسبوع الحالي
-            const weekStart = week * 6;
-            const weekEnd = weekStart + 5;
-            const weekCourseIds = new Set();
-            for (let d = weekStart; d <= Math.min(weekEnd, 29); d++) {
-                getPlanForDay(d).forEach(c => weekCourseIds.add(c.id));
-            }
-            const weekCourses = courses.filter(c => weekCourseIds.has(c.id));
-
             todayBanner = `
-                <div style="background:linear-gradient(135deg,rgba(46,139,87,0.15),rgba(46,139,87,0.05));border:1px solid rgba(46,139,87,0.3);border-radius:16px;padding:20px 22px;margin-bottom:24px;">
-                    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
-                        <span style="font-size:2rem;">🌙</span>
-                        <div>
-                            <strong style="color:#2E8B57;display:block;font-size:1rem;">يوم الجمعة — يوم المراجعة والراحة يا بطل</strong>
-                            <span style="color:rgba(255,255,255,0.6);font-size:0.85rem;">راجع كراسات الأسبوع ${week+1} واستعد للأسبوع القادم</span>
-                        </div>
-                        <button onclick="showFridayModal()" style="margin-right:auto;background:rgba(46,139,87,0.2);border:1px solid rgba(46,139,87,0.4);color:#2E8B57;padding:8px 16px;border-radius:20px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:700;font-size:0.85rem;white-space:nowrap;">
-                            إحصائياتي
-                        </button>
+                <div style="background:linear-gradient(135deg,rgba(46,139,87,0.15),rgba(46,139,87,0.05));border:1px solid rgba(46,139,87,0.3);border-radius:16px;padding:18px 22px;margin-bottom:24px;display:flex;align-items:center;gap:14px;">
+                    <span style="font-size:2rem;">🌙</span>
+                    <div>
+                        <strong style="color:#2E8B57;display:block;font-size:1rem;">يوم الجمعة — يوم المراجعة</strong>
+                        <span style="color:rgba(255,255,255,0.6);font-size:0.85rem;">راجع دروس الأسبوع واستعد لأسبوع جديد من الإنجاز</span>
                     </div>
-                    <p style="font-size:0.85rem;color:rgba(255,255,255,0.5);margin:0 0 12px;">كراسات الأسبوع ${week+1} للمراجعة:</p>
+                    <button onclick="showFridayModal()" style="margin-right:auto;background:rgba(46,139,87,0.2);border:1px solid rgba(46,139,87,0.4);color:#2E8B57;padding:8px 16px;border-radius:20px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:700;font-size:0.85rem;white-space:nowrap;">
+                        إحصائياتي
+                    </button>
+                </div>
+            `;
+        } else if (studyDay >= 0 && studyDay <= 29) {
+            const todayCourses = getPlanForDay(studyDay);
+            const dayNames = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+            todayBanner = `
+                <div style="background:linear-gradient(135deg,rgba(212,175,55,0.12),rgba(212,175,55,0.04));border:1px solid rgba(212,175,55,0.25);border-radius:16px;padding:18px 22px;margin-bottom:24px;">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                        <span style="font-size:1.5rem;">📅</span>
+                        <strong style="color:#D4AF37;font-size:1rem;">دروسك اليوم — ${dayNames[new Date().getDay()]} (اليوم ${studyDay+1})</strong>
+                    </div>
                     <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                        ${weekCourses.map(c => `
+                        ${todayCourses.map(c => `
                             <button onclick="navigateTo('course',{courseId:${c.id},lessonIndex:0})"
-                                style="background:rgba(46,139,87,0.15);border:1px solid rgba(46,139,87,0.3);color:rgba(255,255,255,0.85);padding:8px 16px;border-radius:20px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:0.85rem;display:flex;align-items:center;gap:6px;">
-                                <i class="fas fa-book-open" style="color:#2E8B57;font-size:0.75rem;"></i>${c.title}
+                                style="background:rgba(212,175,55,0.12);border:1px solid rgba(212,175,55,0.3);color:rgba(255,255,255,0.85);padding:8px 16px;border-radius:20px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:0.85rem;display:flex;align-items:center;gap:6px;">
+                                <i class="fas fa-book-open" style="color:#D4AF37;font-size:0.75rem;"></i>${c.title}
                             </button>
                         `).join('')}
                     </div>
-                </div>
-            `;
-            // في يوم الجمعة: نُخفي الكراسات الجديدة تماماً، نعرض فقط البانر
-            return `
-                ${todayBanner}
-                <div class="hero">
-                    <h1>حصون الإيمان</h1>
-                    <p>المنهج الصيفي المتكامل لبناء شخصية ابنك المسلمة</p>
-                    <p class="sub-meta">📚 11 كراسة &nbsp;|&nbsp; 5 أسابيع &nbsp;|&nbsp; للفئة 9-15 سنة</p>
-                </div>
-                <div class="author-card">
-                    <div class="author-emblem">🛡️</div>
-                    <div class="author-label">إعداد وتأليف المادة العلمية</div>
-                    <div class="author-name">محمد أبو عبد الرحمن</div>
-                    <div class="author-dua">عفا الله عنه ووالديه والمسلمين</div>
-                    <div class="author-divider"></div>
-                    <span class="author-edition">
-                        <i class="fas fa-medal" style="color:#D4AF37"></i>
-                        الإصدار الثاني — 2026م
-                    </span>
-                </div>
-            `;
-
-        } else if (studyDay >= 0 && studyDay <= 29) {
-            // ── يوم دراسي عادي: عرض كراسات اليوم مع تقدمها ──
-            const todayCourses = getPlanForDay(studyDay);
-            const unlockedCount = week + 1;
-
-            todayBanner = `
-                <div style="background:linear-gradient(135deg,rgba(212,175,55,0.12),rgba(212,175,55,0.04));border:1px solid rgba(212,175,55,0.25);border-radius:16px;padding:18px 22px;margin-bottom:24px;">
-                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-                        <span style="font-size:1.5rem;">📅</span>
-                        <div>
-                            <strong style="color:#D4AF37;display:block;font-size:1rem;">الأسبوع ${week+1} — ${dayNames[dayInWeek]}</strong>
-                            <span style="color:rgba(255,255,255,0.5);font-size:0.8rem;">الدروس المفتوحة: ${unlockedCount} درس لكل كراسة</span>
-                        </div>
-                    </div>
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
-                        ${todayCourses.map(c => {
-                            const progress = getCourseProgress(c.id);
-                            const totalL = c.lessons.length;
-                            const openL = Math.min(unlockedCount, totalL);
-                            return `
-                                <div onclick="navigateTo('course',{courseId:${c.id},lessonIndex:0})"
-                                    style="background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.2);border-radius:12px;padding:12px 14px;cursor:pointer;transition:background 0.2s;"
-                                    onmouseenter="this.style.background='rgba(212,175,55,0.15)'" onmouseleave="this.style.background='rgba(212,175,55,0.08)'">
-                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-                                        <i class="fas ${c.icon}" style="color:${c.color};font-size:1rem;"></i>
-                                        <strong style="font-size:0.88rem;color:rgba(255,255,255,0.9);">${c.title}</strong>
-                                    </div>
-                                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-bottom:6px;">${openL} / ${totalL} درس مفتوح</div>
-                                    <div style="background:rgba(255,255,255,0.08);border-radius:4px;height:4px;overflow:hidden;">
-                                        <div style="background:#D4AF37;height:100%;width:${progress}%;transition:width 0.4s;"></div>
-                                    </div>
-                                    <div style="font-size:0.72rem;color:rgba(255,255,255,0.4);margin-top:4px;">${progress}% مكتمل</div>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-            `;
-        } else if (studyDay < 0) {
-            // لم تبدأ الدورة بعد
-            todayBanner = `
-                <div style="background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.2);border-radius:16px;padding:16px 20px;margin-bottom:24px;text-align:center;">
-                    <span style="font-size:1.5rem;">⏳</span>
-                    <p style="color:rgba(255,255,255,0.6);margin:8px 0 0;font-size:0.9rem;">الدورة لم تبدأ بعد — ستبدأ دروسك في التاريخ المحدد</p>
-                </div>
-            `;
-        } else {
-            // انتهت الأسابيع الخمسة
-            todayBanner = `
-                <div style="background:linear-gradient(135deg,rgba(46,139,87,0.15),rgba(46,139,87,0.05));border:1px solid rgba(46,139,87,0.3);border-radius:16px;padding:18px 22px;margin-bottom:24px;text-align:center;">
-                    <span style="font-size:2rem;">🏆</span>
-                    <strong style="color:#2E8B57;display:block;margin:8px 0 4px;">أتممت الرحلة الإيمانية!</strong>
-                    <p style="color:rgba(255,255,255,0.6);font-size:0.85rem;margin:0;">جزاك الله خيراً على إتمام 5 أسابيع من حصون الإيمان</p>
                 </div>
             `;
         }
@@ -1236,7 +1336,7 @@ function renderHome() {
         <div class="hero">
             <h1>حصون الإيمان</h1>
             <p>المنهج الصيفي المتكامل لبناء شخصية ابنك المسلمة</p>
-            <p class="sub-meta">📚 11 كراسة &nbsp;|&nbsp; 5 أسابيع &nbsp;|&nbsp; للفئة 9-15 سنة</p>
+            <p class="sub-meta">📚 10 كراسات &nbsp;|&nbsp; 130 درساً &nbsp;|&nbsp; 45 يوماً &nbsp;|&nbsp; للفئة 9-15 سنة</p>
             <div class="hero-actions">
                 <a class="btn-hero btn-game" href="game.html">
                     <i class="fas fa-gamepad"></i> ابدأ السباق الآن
@@ -1255,7 +1355,7 @@ function renderHome() {
             <div class="author-divider"></div>
             <span class="author-edition">
                 <i class="fas fa-medal" style="color:#D4AF37"></i>
-                الإصدار الثاني — 2026م
+                الإصدار الأول — 2026م
             </span>
         </div>
 
@@ -1290,54 +1390,19 @@ function renderHome() {
 // ---------- صفحة الكراسات ----------
 function renderCoursesGrid() {
     const mode = localStorage.getItem(LS_MODE);
-
-    if (mode === 'course') {
-        // في وضع الدورة: توجيه المستخدم للصفحة الرئيسية
-        return `
-            <h2 class="section-title">الكراسات العشر</h2>
-            <div style="text-align:center;padding:30px 20px;margin-bottom:24px;background:rgba(212,175,55,0.06);border:1px solid rgba(212,175,55,0.15);border-radius:16px;">
-                <span style="font-size:2rem;display:block;margin-bottom:10px;">📅</span>
-                <p style="color:rgba(255,255,255,0.7);max-width:360px;margin:0 auto 16px;font-size:0.9rem;">
-                    في وضع الدورة المنظمة، تُعرض كراساتك اليومية من الصفحة الرئيسية حسب جدول الأسبوع.
-                </p>
-                <button onclick="navigateTo('home')" style="background:var(--gold);color:#1a1207;border:none;padding:10px 24px;border-radius:24px;font-family:'Cairo',sans-serif;font-weight:700;font-size:0.9rem;cursor:pointer;">
-                    <i class="fas fa-home"></i> الذهاب للرئيسية
-                </button>
-            </div>
-            <div class="courses-grid">
-                ${courses.map(c => {
-                    const progress = getCourseProgress(c.id);
-                    const unlocked = isCourseUnlocked(c.id);
-                    const lockHtml = !unlocked ? `
-                        <div style="margin-top:10px;display:flex;align-items:center;gap:6px;justify-content:center;color:rgba(255,255,255,0.4);font-size:0.78rem;">
-                            <i class="fas fa-lock" style="color:#D4AF37;"></i> يُفتح في موعده
-                        </div>` : '';
-                    return `
-                        <div class="course-card ${!unlocked ? 'lesson-locked' : ''}"
-                             onclick="${unlocked ? `navigateTo('course', {courseId: ${c.id}, lessonIndex: 0})` : 'void(0)'}">
-                            <div class="icon"><i class="fas ${c.icon}" style="color:${c.color}"></i></div>
-                            <h3>${c.title}</h3>
-                            <div class="badge">${c.lessons.length} دروس</div>
-                            <div class="progress-indicator">
-                                <div class="fill" style="width:${progress}%;"></div>
-                            </div>
-                            <span style="font-size:0.8rem;color:var(--text-light);">${progress}% مكتمل</span>
-                            ${lockHtml}
-                        </div>
-                    `;
-                }).join('')}
-            </div>
-        `;
-    }
-
-    // وضع حر: شبكة كاملة
     return `
         <h2 class="section-title">الكراسات العشر</h2>
         <div class="courses-grid">
             ${courses.map(c => {
                 const progress = getCourseProgress(c.id);
+                const unlocked = isCourseUnlocked(c.id);
+                const lockHtml = (mode === 'course' && !unlocked) ? `
+                    <div style="margin-top:10px;display:flex;align-items:center;gap:6px;justify-content:center;color:rgba(255,255,255,0.4);font-size:0.78rem;">
+                        <i class="fas fa-lock" style="color:#D4AF37;"></i> يُفتح في موعده
+                    </div>` : '';
                 return `
-                    <div class="course-card" onclick="navigateTo('course', {courseId: ${c.id}, lessonIndex: 0})">
+                    <div class="course-card ${mode === 'course' && !unlocked ? 'lesson-locked' : ''}"
+                         onclick="${mode !== 'course' || unlocked ? `navigateTo('course', {courseId: ${c.id}, lessonIndex: 0})` : 'void(0)'}">
                         <div class="icon"><i class="fas ${c.icon}" style="color:${c.color}"></i></div>
                         <h3>${c.title}</h3>
                         <div class="badge">${c.lessons.length} دروس</div>
@@ -1345,6 +1410,7 @@ function renderCoursesGrid() {
                             <div class="fill" style="width:${progress}%;"></div>
                         </div>
                         <span style="font-size:0.8rem;color:var(--text-light);">${progress}% مكتمل</span>
+                        ${lockHtml}
                     </div>
                 `;
             }).join('')}
@@ -1352,64 +1418,48 @@ function renderCoursesGrid() {
     `;
 }
 
-// ---------- خطة التدريس الأسبوعية ----------
+// ---------- خطة التدريس ----------
 function renderPlan() {
-    const dayNames = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس"];
+    const days = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس"];
     const startDate = localStorage.getItem(LS_START_DATE);
-    const mode = localStorage.getItem(LS_MODE);
-    const todayStudy = startDate ? calcStudyDay(startDate) : -1;
-    const currentWeek = startDate ? getCurrentWeek(startDate) : -1;
+    let rows = '';
+    for (let i = 0; i < 30; i++) {
+        const week = Math.floor(i / 6) + 1;
+        const dayName = days[i % 6];
+        const c1 = courses[i % courses.length].title;
+        const c2 = courses[(i + 3) % courses.length].title;
+        const c3 = courses[(i + 6) % courses.length].title;
 
-    let weeksHtml = '';
-    for (let w = 0; w < 5; w++) {
-        const isCurrentWeek = (mode === 'course' && w === currentWeek && !isTodayFriday());
-        let daysHtml = '';
-        for (let d = 0; d < 6; d++) {
-            const dayIndex = w * 6 + d;
-            const dayCourses = getPlanForDay(dayIndex);
-            const isToday = (mode === 'course' && dayIndex === todayStudy && !isTodayFriday());
-            daysHtml += `
-                <tr style="${isToday ? 'background:rgba(212,175,55,0.14);font-weight:700;' : ''}">
-                    <td style="${isToday ? 'color:#D4AF37;' : ''}">${isToday ? '📍 ' : ''}${dayNames[d]}</td>
-                    ${dayCourses.map(c => `<td>${c.title}</td>`).join('')}
-                </tr>
-            `;
-        }
-        // يوم الجمعة للمراجعة
-        daysHtml += `
-            <tr style="background:rgba(46,139,87,0.08);font-style:italic;">
-                <td style="color:#2E8B57;">🌙 الجمعة</td>
-                <td colspan="3" style="text-align:center;color:rgba(255,255,255,0.5);font-size:0.85rem;">يوم المراجعة والراحة</td>
+        // تمييز اليوم الحالي
+        const mode = localStorage.getItem(LS_MODE);
+        const todayStudy = startDate ? calcStudyDay(startDate) : -1;
+        const isToday = (mode === 'course' && i === todayStudy && !isTodayFriday());
+        rows += `
+            <tr style="${isToday ? 'background:rgba(212,175,55,0.12);font-weight:700;' : ''}">
+                <td>${isToday ? '📍 ' : ''}${dayName} (أسبوع ${week})</td>
+                <td>${c1}</td>
+                <td>${c2}</td>
+                <td>${c3}</td>
             </tr>
         `;
-        weeksHtml += `
-            <div style="margin-bottom:28px;">
-                <h3 style="color:${isCurrentWeek ? '#D4AF37' : 'var(--text-light)'};margin-bottom:12px;font-size:0.95rem;">
-                    ${isCurrentWeek ? '📍 ' : ''}الأسبوع ${w+1} ${isCurrentWeek ? '(الأسبوع الحالي)' : ''}
-                </h3>
-                <div class="plan-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>اليوم</th>
-                                <th>الكراسة الأولى</th>
-                                <th>الكراسة الثانية</th>
-                                <th>الكراسة الثالثة</th>
-                            </tr>
-                        </thead>
-                        <tbody>${daysHtml}</tbody>
-                    </table>
-                </div>
-            </div>
-        `;
     }
-
     return `
-        <h2 class="section-title">📅 خطة التدريس الأسبوعية</h2>
-        <p style="text-align:center;color:var(--text-light);margin-bottom:24px;font-size:0.88rem;">5 أسابيع &nbsp;|&nbsp; 6 أيام دراسية / أسبوع &nbsp;|&nbsp; 3 كراسات / يوم</p>
-        ${weeksHtml}
-        <p style="text-align:center;margin-top:8px;color:var(--text-light);">
-            <i class="fas fa-info-circle"></i> خطة مرنة — يمكن تعديلها حسب رغبة المعلم
+        <h2 class="section-title">📅 خطة التدريس اليومية</h2>
+        <div class="plan-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>اليوم</th>
+                        <th>الحصة الأولى</th>
+                        <th>الحصة الثانية</th>
+                        <th>الحصة الثالثة</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+        <p style="text-align:center;margin-top:16px;color:var(--text-light);">
+            <i class="fas fa-info-circle"></i> خطة مرنة – يمكن تعديلها حسب رغبة المعلم
         </p>
     `;
 }
@@ -1425,7 +1475,7 @@ function renderContact() {
             <div class="author-divider"></div>
             <span class="author-edition">
                 <i class="fas fa-book-open" style="color:#D4AF37"></i>
-                حصون الإيمان — الإصدار الثاني 2026م
+                حصون الإيمان — الإصدار الأول 2026م
             </span>
         </div>
         <div class="contact-box">
@@ -1454,11 +1504,13 @@ function renderCourseDetail(courseId, lessonIndex) {
     const totalLessons = course.lessons.length;
     const progress = getCourseProgress(course.id);
 
+    // ── نظام الفتح التدريجي ──────────────────────────────────────
     const currentStudyDay = getCurrentStudyDayForUnlocking();
     const unlockedCount   = getUnlockedLessonCount(courseId, currentStudyDay);
     const mode            = localStorage.getItem(LS_MODE);
     const isFreeMode      = (mode !== 'course');
 
+    // إذا حاول الطالب الوصول لدرس مغلق → أعده للأول المفتوح
     if (!isFreeMode && lessonIndex >= unlockedCount && unlockedCount > 0) {
         lessonIndex = unlockedCount - 1;
     } else if (!isFreeMode && unlockedCount === 0) {
@@ -1467,7 +1519,7 @@ function renderCourseDetail(courseId, lessonIndex) {
                 <div style="font-size:3rem;margin-bottom:16px;">🔒</div>
                 <h3 style="color:var(--gold);margin-bottom:12px;">هذه الكراسة لم تُفتح بعد</h3>
                 <p style="color:var(--text-light);max-width:320px;margin:0 auto 24px;">
-                    ستُفتح هذه الكراسة تلقائياً عندما تصل إليها في جدولك الأسبوعي.
+                    ستُفتح هذه الكراسة تلقائياً عندما تصل إليها في خطتك الدراسية.
                 </p>
                 <button onclick="navigateTo('home')" style="background:var(--gold);color:#1a1207;border:none;padding:12px 28px;border-radius:24px;font-family:'Cairo',sans-serif;font-weight:700;font-size:0.95rem;cursor:pointer;">
                     <i class="fas fa-arrow-right"></i> العودة للرئيسية
@@ -1476,11 +1528,12 @@ function renderCourseDetail(courseId, lessonIndex) {
         `;
     }
 
+    // ── بناء القائمة الجانبية مع أيقونات القفل ───────────────────
     let sidebarLinks = course.lessons.map((l, idx) => {
-        const done       = isLessonDone(course.id, idx);
+        const done      = isLessonDone(course.id, idx);
         const isUnlocked = isFreeMode || (idx < unlockedCount);
-        const active     = (idx === lessonIndex) ? 'active' : '';
-        const dotClass   = done ? 'done' : '';
+        const active    = (idx === lessonIndex) ? 'active' : '';
+        const dotClass  = done ? 'done' : '';
 
         if (isUnlocked) {
             return `
@@ -1490,6 +1543,7 @@ function renderCourseDetail(courseId, lessonIndex) {
                 </a>
             `;
         } else {
+            // درس مغلق
             return `
                 <a class="lesson-link lesson-locked" onclick="void(0)" style="opacity:0.45;pointer-events:none;cursor:default;">
                     <span class="lock-icon" style="font-size:0.8rem;margin-left:4px;">🔒</span>
@@ -1499,6 +1553,7 @@ function renderCourseDetail(courseId, lessonIndex) {
         }
     }).join('');
 
+    // بادج عدد الدروس المفتوحة (في وضع الدورة)
     const unlockBadge = (!isFreeMode && unlockedCount < totalLessons)
         ? `<div style="margin:8px 0 12px;padding:7px 12px;background:rgba(212,175,55,0.1);border:1px solid rgba(212,175,55,0.25);border-radius:10px;font-size:0.78rem;color:var(--gold);text-align:center;">
                🔓 ${unlockedCount} من ${totalLessons} درس مفتوح
@@ -1509,11 +1564,15 @@ function renderCourseDetail(courseId, lessonIndex) {
     const done   = isLessonDone(course.id, lessonIndex);
     const sectionsHtml = renderSections(lesson.sections);
 
+    // ── أزرار التنقل مع منع الدروس المغلقة ──────────────────────
     const prevDisabled = lessonIndex === 0;
     const nextLockedByPlan = !isFreeMode && (lessonIndex + 1 >= unlockedCount);
     const nextLockedByEnd  = lessonIndex === totalLessons - 1;
     const nextDisabled = nextLockedByEnd || nextLockedByPlan;
-    const nextTitle = nextLockedByPlan && !nextLockedByEnd ? 'title="هذا الدرس لم يُفتح بعد 🔒"' : '';
+
+    const nextTitle = nextLockedByPlan && !nextLockedByEnd
+        ? 'title="هذا الدرس لم يُفتح بعد 🔒"'
+        : '';
 
     return `
         <div class="course-detail-layout">
@@ -1651,11 +1710,12 @@ function completeLesson(event, courseId, lessonIndex, courseTitle, lessonTitle) 
         showCheerMessage("🎯", "الدرس مكتمل بالفعل!", "أنت ممتاز! واصل التقدم.");
         return;
     }
+    // حماية إضافية: تأكد من أن الدرس مفتوح قبل إتمامه
     const currentStudyDay = getCurrentStudyDayForUnlocking();
     const unlockedCount   = getUnlockedLessonCount(courseId, currentStudyDay);
     const mode = localStorage.getItem(LS_MODE);
     if (mode === 'course' && lessonIndex >= unlockedCount) {
-        showCheerMessage("🔒", "هذا الدرس مغلق!", "انتظر حتى يُفتح هذا الدرس في جدولك الأسبوعي.");
+        showCheerMessage("🔒", "هذا الدرس مغلق!", "انتظر حتى يُفتح هذا الدرس في خطتك الدراسية.");
         return;
     }
     localStorage.setItem(getProgressKey(courseId, lessonIndex), 'true');
@@ -1708,10 +1768,12 @@ window.onload = function() {
     navigateTo('home');
     updateModeBadge();
 
+    // هل يحتاج الإعداد؟
     setTimeout(() => {
         if (!localStorage.getItem(LS_SETUP_DONE)) {
             showWelcomeModal();
         } else {
+            // سبق الإعداد — هل اليوم جمعة؟
             if (isTodayFriday() && localStorage.getItem(LS_MODE) === 'course') {
                 const fridayShown = localStorage.getItem('hosoon_friday_' + toLocalDateStr(new Date()));
                 if (!fridayShown) {
