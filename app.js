@@ -943,15 +943,15 @@ function completedStudyDays(startDateStr) {
 }
 
 // ما هي الكراسات المتاحة اليوم في وضع الدورة؟
+
 function getUnlockedCourseIds() {
     const mode = localStorage.getItem(LS_MODE);
-    if (mode !== 'course') return courses.map(c => c.id); // كل شيء مفتوح
+    if (mode !== 'course') return courses.map(c => c.id);
 
     const startDate = localStorage.getItem(LS_START_DATE);
     if (!startDate) return [];
 
     if (isTodayFriday()) {
-        // الجمعة: تُفتح كل الدروس السابقة للمراجعة
         const todayStudyDay = completedStudyDays(startDate);
         const unlocked = new Set();
         for (let d = 0; d <= todayStudyDay; d++) {
@@ -961,16 +961,13 @@ function getUnlockedCourseIds() {
     }
 
     const todayStudyDay = calcStudyDay(startDate);
-    if (todayStudyDay < 0) return []; // لم تبدأ
+    if (todayStudyDay < 0) return [];
     const unlocked = new Set();
-    for (let d = 0; d <= Math.min(todayStudyDay, 29); d++) {
+    // ✅ هنا التعديل: أزلنا Math.min(... , 29)
+    for (let d = 0; d <= todayStudyDay; d++) {
         getPlanForDay(d).forEach(c => unlocked.add(c.id));
     }
     return [...unlocked];
-}
-
-function isCourseUnlocked(courseId) {
-    return getUnlockedCourseIds().includes(courseId);
 }
 
 // ================================================================
