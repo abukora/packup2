@@ -1,0 +1,3495 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>🏰 حصون الإيمان — اللعبة</title>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#1B3A4B"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="حصون الإيمان"/>
+<link rel="apple-touch-icon" href="icons/icon-192.png"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"/>
+<style>
+/* ================================================================
+   GAME VARIABLES & RESET
+================================================================ */
+:root {
+  --navy:       #0D1F2D;
+  --navy2:      #1B3A4B;
+  --gold:       #D4AF37;
+  --gold2:      #F0D060;
+  --gold3:      #fff0a0;
+  --green:      #27AE60;
+  --red:        #E74C3C;
+  --purple:     #8E44AD;
+  --blue:       #2980B9;
+  --orange:     #E67E22;
+  --white:      #FFFFFF;
+  --bg:         #0a1520;
+  --card:       rgba(255,255,255,0.06);
+  --card2:      rgba(255,255,255,0.10);
+  --border:     rgba(212,175,55,0.20);
+  --font:       'Cairo', sans-serif;
+  --radius:     18px;
+  --radius-sm:  10px;
+  --glow-gold:  0 0 20px rgba(212,175,55,0.4);
+  --glow-green: 0 0 20px rgba(39,174,96,0.5);
+  --trans:      all 0.3s ease;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{
+  font-family:var(--font);
+  background:var(--bg);
+  color:var(--white);
+  line-height:1.7;
+  position:relative;
+}
+
+/* ================================================================
+   STAR BACKGROUND ANIMATION
+================================================================ */
+#starfield{
+  position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;
+}
+.star{
+  position:absolute;border-radius:50%;
+  background:rgba(212,175,55,0.6);
+  animation:twinkle var(--dur,3s) ease-in-out infinite var(--delay,0s);
+}
+@keyframes twinkle{
+  0%,100%{opacity:0.2;transform:scale(1);}
+  50%{opacity:0.9;transform:scale(1.4);}
+}
+
+/* ================================================================
+   SCREENS SYSTEM
+================================================================ */
+.screen{
+  position:fixed;inset:0;z-index:10;
+  display:none;flex-direction:column;align-items:center;
+  overflow-y:auto;padding-bottom:30px;
+  background:linear-gradient(160deg,#0a1520 0%,#0d2035 50%,#0a1520 100%);
+}
+.screen.active{display:flex;}
+
+/* ================================================================
+   HUD — TOP BAR
+================================================================ */
+#hud{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  display:none;
+  background:rgba(13,31,45,0.95);
+  backdrop-filter:blur(12px);
+  padding:10px 16px;
+  border-bottom:1px solid var(--border);
+  align-items:center;gap:10px;
+  flex-wrap:wrap;
+}
+#hud.visible{display:flex;}
+.hud-stat{
+  display:flex;align-items:center;gap:5px;
+  background:rgba(255,255,255,0.06);
+  padding:5px 12px;border-radius:30px;
+  font-size:0.88rem;font-weight:700;
+  border:1px solid rgba(255,255,255,0.08);
+  white-space:nowrap;
+}
+.hud-stat .icon{font-size:1rem;}
+#hud-xp .icon{color:#D4AF37;}
+#hud-gems .icon{color:#3498DB;}
+#hud-streak .icon{color:#E74C3C;}
+#hud-level{
+  background:linear-gradient(135deg,#D4AF37,#F0D060);
+  color:#000;font-weight:900;
+  padding:5px 14px;border-radius:30px;font-size:0.88rem;
+}
+.hud-xp-bar{
+  flex:1;min-width:80px;
+  height:6px;background:rgba(255,255,255,0.1);
+  border-radius:4px;overflow:hidden;
+}
+.hud-xp-bar-fill{
+  height:100%;background:linear-gradient(90deg,#D4AF37,#F0D060);
+  border-radius:4px;transition:width 0.6s ease;
+}
+.hud-right{margin-right:auto;}
+
+/* ================================================================
+   PARTICLES & EFFECTS
+================================================================ */
+#particles-container{
+  position:fixed;inset:0;pointer-events:none;z-index:200;overflow:hidden;
+}
+.particle{
+  position:absolute;border-radius:50%;pointer-events:none;
+  animation:particle-rise 1.2s ease-out forwards;
+}
+@keyframes particle-rise{
+  0%{opacity:1;transform:translateY(0) scale(1);}
+  100%{opacity:0;transform:translateY(-120px) scale(0.3);}
+}
+#floating-text{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  z-index:300;pointer-events:none;
+  font-size:2.5rem;font-weight:900;
+  color:var(--gold2);
+  text-shadow:0 0 30px rgba(212,175,55,0.8);
+  animation:float-up 1.4s ease-out forwards;
+  display:none;
+  text-align:center;
+}
+@keyframes float-up{
+  0%{opacity:1;transform:translate(-50%,-50%) scale(0.5);}
+  40%{opacity:1;transform:translate(-50%,-70%) scale(1.1);}
+  100%{opacity:0;transform:translate(-50%,-100%) scale(0.9);}
+}
+
+/* ================================================================
+   SCREEN 1: WELCOME / ONBOARDING
+================================================================ */
+#screen-welcome{
+  justify-content:center;
+  background:linear-gradient(160deg,#050d14 0%,#0d2035 60%,#050d14 100%);
+}
+.welcome-castle{
+  font-size:5rem;margin-bottom:8px;
+  animation:castle-glow 2s ease-in-out infinite alternate;
+  filter:drop-shadow(0 0 20px rgba(212,175,55,0.6));
+}
+@keyframes castle-glow{
+  from{filter:drop-shadow(0 0 15px rgba(212,175,55,0.4));}
+  to{filter:drop-shadow(0 0 35px rgba(212,175,55,0.9));}
+}
+.welcome-title{
+  font-size:2.4rem;font-weight:900;
+  background:linear-gradient(135deg,#D4AF37,#F0D060,#D4AF37);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  text-align:center;margin-bottom:4px;
+}
+.welcome-sub{
+  font-size:1rem;color:rgba(255,255,255,0.65);
+  text-align:center;margin-bottom:30px;
+}
+.welcome-form{
+  width:100%;max-width:340px;padding:0 20px;
+  display:flex;flex-direction:column;gap:14px;
+}
+.input-group{position:relative;}
+.input-group i{
+  position:absolute;right:14px;top:50%;transform:translateY(-50%);
+  color:var(--gold);font-size:1.1rem;
+}
+.game-input{
+  width:100%;padding:14px 44px 14px 16px;
+  background:rgba(255,255,255,0.07);
+  border:1.5px solid var(--border);
+  border-radius:var(--radius-sm);
+  color:var(--white);font-family:var(--font);font-size:1rem;
+  outline:none;transition:var(--trans);
+}
+.game-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,175,55,0.15);}
+.game-input::placeholder{color:rgba(255,255,255,0.35);}
+.avatar-grid{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:8px;
+}
+.avatar-opt{
+  font-size:1.8rem;text-align:center;
+  padding:10px 4px;border-radius:var(--radius-sm);
+  cursor:pointer;
+  background:rgba(255,255,255,0.05);
+  border:2px solid transparent;
+  transition:var(--trans);
+}
+.avatar-opt:hover,.avatar-opt.chosen{
+  border-color:var(--gold);
+  background:rgba(212,175,55,0.15);
+  transform:scale(1.12);
+}
+.age-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+}
+.age-opt{
+  padding:10px 4px;text-align:center;
+  border-radius:var(--radius-sm);cursor:pointer;
+  background:rgba(255,255,255,0.05);
+  border:2px solid transparent;
+  font-size:0.95rem;font-weight:700;
+  transition:var(--trans);
+}
+.age-opt:hover,.age-opt.chosen{
+  border-color:var(--gold);
+  background:rgba(212,175,55,0.15);
+}
+.label-small{
+  font-size:0.82rem;color:rgba(212,175,55,0.8);
+  margin-bottom:6px;font-weight:600;
+}
+
+/* ================================================================
+   SCREEN 2: MAP (World Map)
+================================================================ */
+#screen-map{padding-top:80px;}
+.map-header{
+  text-align:center;padding:20px 16px 10px;width:100%;
+}
+.map-header h1{
+  font-size:1.6rem;font-weight:900;color:var(--gold);
+}
+.player-greeting{
+  font-size:0.95rem;color:rgba(255,255,255,0.7);margin-top:4px;
+}
+.map-grid{
+  width:100%;max-width:480px;padding:10px 16px 20px;
+  display:flex;flex-direction:column;gap:14px;
+}
+.fortress-card{
+  background:var(--card);
+  border:1.5px solid var(--border);
+  border-radius:var(--radius);
+  padding:18px 16px;
+  cursor:pointer;
+  transition:var(--trans);
+  position:relative;overflow:hidden;
+  display:flex;align-items:center;gap:16px;
+}
+.fortress-card::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,transparent,rgba(212,175,55,0.04));
+  pointer-events:none;
+}
+.fortress-card:hover,.fortress-card:active{
+  transform:translateY(-3px);
+  border-color:var(--gold);
+  box-shadow:0 8px 30px rgba(0,0,0,0.3),var(--glow-gold);
+}
+.fortress-card.locked{
+  opacity:0.5;cursor:not-allowed;
+  filter:grayscale(0.6);
+}
+.fortress-card.locked:hover{transform:none;box-shadow:none;border-color:var(--border);}
+.fortress-card.completed{
+  border-color:var(--green);
+  box-shadow:var(--glow-green);
+}
+.fortress-icon-wrap{
+  width:60px;height:60px;flex-shrink:0;
+  background:rgba(255,255,255,0.07);
+  border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.8rem;
+  border:1.5px solid rgba(255,255,255,0.1);
+  position:relative;
+}
+.fortress-icon-wrap .lock-badge{
+  position:absolute;top:-6px;right:-6px;
+  background:#555;border-radius:50%;
+  width:20px;height:20px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.6rem;
+}
+.fortress-info{flex:1;min-width:0;}
+.fortress-name{
+  font-size:1.05rem;font-weight:900;
+  color:var(--white);margin-bottom:3px;
+}
+.fortress-meta{
+  font-size:0.8rem;color:rgba(255,255,255,0.55);
+  margin-bottom:8px;
+}
+.fortress-prog-wrap{
+  height:5px;background:rgba(255,255,255,0.1);
+  border-radius:4px;overflow:hidden;margin-bottom:4px;
+}
+.fortress-prog-fill{
+  height:100%;border-radius:4px;
+  transition:width 0.7s ease;
+}
+.fortress-pct{
+  font-size:0.75rem;color:rgba(255,255,255,0.5);
+}
+.fortress-badge{
+  width:32px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.4rem;
+}
+.chapter-number{
+  position:absolute;top:10px;left:14px;
+  font-size:0.7rem;font-weight:700;
+  color:rgba(212,175,55,0.6);
+  letter-spacing:1px;
+}
+
+/* ================================================================
+   SCREEN 3: LESSONS LIST
+================================================================ */
+#screen-lessons{padding-top:80px;}
+.back-bar{
+  width:100%;padding:14px 16px;
+  display:flex;align-items:center;gap:12px;
+}
+.btn-back-game{
+  background:rgba(255,255,255,0.08);
+  border:1px solid var(--border);
+  color:var(--white);padding:8px 16px;
+  border-radius:30px;font-family:var(--font);
+  font-size:0.9rem;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;gap:6px;
+  transition:var(--trans);
+}
+.btn-back-game:hover{background:rgba(255,255,255,0.14);}
+.lesson-fortress-title{
+  font-size:1.1rem;font-weight:900;color:var(--gold);
+}
+.lessons-list{
+  width:100%;max-width:480px;padding:4px 16px 20px;
+  display:flex;flex-direction:column;gap:10px;
+}
+.lesson-row{
+  background:var(--card);
+  border:1.5px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:14px 16px;
+  display:flex;align-items:center;gap:14px;
+  cursor:pointer;transition:var(--trans);
+  position:relative;overflow:hidden;
+}
+.lesson-row.done{border-color:rgba(39,174,96,0.5);}
+.lesson-row.locked{opacity:0.45;cursor:not-allowed;}
+.lesson-row:not(.locked):hover{
+  border-color:var(--gold);
+  transform:translateX(-4px);
+  box-shadow:4px 0 20px rgba(0,0,0,0.3);
+}
+.lesson-num{
+  width:38px;height:38px;flex-shrink:0;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:0.9rem;
+  background:rgba(255,255,255,0.08);
+  border:1.5px solid rgba(255,255,255,0.15);
+}
+.lesson-row.done .lesson-num{
+  background:var(--green);border-color:var(--green);
+}
+.lesson-row.current .lesson-num{
+  background:var(--gold);color:#000;border-color:var(--gold);
+  animation:pulse-num 1.5s ease infinite;
+}
+@keyframes pulse-num{
+  0%,100%{box-shadow:0 0 0 0 rgba(212,175,55,0.5);}
+  50%{box-shadow:0 0 0 8px rgba(212,175,55,0);}
+}
+.lesson-info{flex:1;}
+.lesson-title-row{
+  font-size:0.95rem;font-weight:700;
+  color:var(--white);margin-bottom:3px;
+}
+.lesson-xp-tag{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:0.75rem;color:var(--gold);
+  background:rgba(212,175,55,0.1);
+  padding:2px 10px;border-radius:20px;
+}
+.lesson-status-icon{font-size:1.3rem;}
+
+/* ================================================================
+   SCREEN 4: LESSON CONTENT READER
+================================================================ */
+#screen-lesson{padding-top:80px;}
+.lesson-content-wrap{
+  width:100%;max-width:600px;padding:10px 16px 20px;
+}
+.lesson-card-game{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  margin-bottom:14px;overflow:hidden;
+}
+.section-header-game{
+  padding:12px 16px;
+  display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+}
+.section-icon-circle{
+  width:36px;height:36px;flex-shrink:0;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1rem;font-weight:900;
+}
+.section-type-label{
+  font-size:0.85rem;font-weight:700;color:var(--gold);
+}
+.section-body{
+  padding:14px 16px;
+  font-size:0.95rem;line-height:1.85;
+  color:rgba(255,255,255,0.88);
+}
+.section-body p{margin-bottom:10px;}
+/* Quran style */
+.quran-text{
+  font-size:1.05rem;
+  color:var(--gold2);
+  background:rgba(212,175,55,0.07);
+  border-right:3px solid var(--gold);
+  padding:10px 14px;
+  border-radius:0 8px 8px 0;
+  margin:8px 0;line-height:2;
+}
+/* Hadith style */
+.hadith-text{
+  font-size:0.95rem;
+  color:#a8d8ea;
+  background:rgba(41,128,185,0.08);
+  border-right:3px solid #2980B9;
+  padding:10px 14px;
+  border-radius:0 8px 8px 0;
+  margin:8px 0;
+}
+.source-tag{
+  font-size:0.78rem;
+  color:rgba(255,255,255,0.45);
+  font-style:italic;margin-top:4px;
+  display:block;
+}
+/* Read Complete Button */
+.btn-read-done{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  width:100%;padding:16px;margin-top:10px;
+  background:linear-gradient(135deg,#1B3A4B,#0D2035);
+  border:2px solid var(--gold);
+  border-radius:var(--radius);
+  color:var(--gold);font-family:var(--font);font-size:1.1rem;font-weight:900;
+  cursor:pointer;transition:var(--trans);
+}
+.btn-read-done:hover{
+  background:linear-gradient(135deg,var(--gold),var(--gold2));
+  color:#000;box-shadow:var(--glow-gold);
+}
+
+/* ================================================================
+   SCREEN 5: QUIZ
+================================================================ */
+#screen-quiz{justify-content:flex-start;padding-top:80px;}
+.quiz-wrap{
+  width:100%;max-width:480px;
+  padding:10px 16px 30px;
+}
+.quiz-progress-bar{
+  height:6px;background:rgba(255,255,255,0.1);
+  border-radius:4px;overflow:hidden;margin-bottom:20px;
+}
+.quiz-progress-fill{
+  height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));
+  border-radius:4px;transition:width 0.4s ease;
+}
+.quiz-q-num{
+  font-size:0.8rem;color:rgba(212,175,55,0.7);
+  margin-bottom:6px;font-weight:600;letter-spacing:1px;
+}
+.quiz-question{
+  font-size:1.15rem;font-weight:700;
+  color:var(--white);margin-bottom:20px;
+  line-height:1.7;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:18px 16px;
+}
+.quiz-options{
+  display:flex;flex-direction:column;gap:10px;
+  margin-bottom:16px;
+}
+.quiz-opt{
+  padding:14px 16px;
+  background:var(--card);
+  border:1.5px solid var(--border);
+  border-radius:var(--radius-sm);
+  color:var(--white);font-family:var(--font);font-size:0.97rem;font-weight:600;
+  cursor:pointer;transition:var(--trans);
+  text-align:right;
+  display:flex;align-items:center;gap:10px;
+}
+.quiz-opt:hover:not(:disabled){
+  border-color:var(--gold);
+  background:rgba(212,175,55,0.08);
+  transform:translateX(-4px);
+}
+.quiz-opt.correct{
+  border-color:var(--green);
+  background:rgba(39,174,96,0.15);
+  animation:correct-pulse 0.4s ease;
+}
+.quiz-opt.wrong{
+  border-color:var(--red);
+  background:rgba(231,76,60,0.12);
+  animation:shake 0.4s ease;
+}
+@keyframes correct-pulse{
+  0%{transform:scale(1);}50%{transform:scale(1.03);}100%{transform:scale(1);}
+}
+@keyframes shake{
+  0%,100%{transform:translateX(0);}
+  25%{transform:translateX(-8px);}75%{transform:translateX(8px);}
+}
+.opt-circle{
+  width:30px;height:30px;flex-shrink:0;
+  border-radius:50%;
+  border:1.5px solid rgba(255,255,255,0.2);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:0.85rem;
+  background:rgba(255,255,255,0.05);
+}
+.quiz-feedback{
+  padding:14px 16px;
+  border-radius:var(--radius-sm);
+  font-size:0.95rem;font-weight:600;
+  margin-bottom:14px;
+  display:none;
+  line-height:1.6;
+}
+.quiz-feedback.correct-fb{
+  background:rgba(39,174,96,0.12);
+  border:1px solid rgba(39,174,96,0.3);
+  color:#7defa5;
+}
+.quiz-feedback.wrong-fb{
+  background:rgba(231,76,60,0.1);
+  border:1px solid rgba(231,76,60,0.3);
+  color:#f1a0a0;
+}
+.btn-next-q{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:15px;
+  background:linear-gradient(135deg,var(--gold),var(--gold2));
+  color:#000;border:none;border-radius:var(--radius);
+  font-family:var(--font);font-size:1.05rem;font-weight:900;
+  cursor:pointer;transition:var(--trans);
+  display:none;
+}
+.btn-next-q:hover{transform:translateY(-2px);box-shadow:var(--glow-gold);}
+.quiz-timer{
+  text-align:center;font-size:2rem;font-weight:900;
+  color:var(--gold);margin-bottom:10px;
+  font-variant-numeric:tabular-nums;
+}
+.quiz-timer.urgent{color:var(--red);animation:blink 0.5s ease infinite alternate;}
+@keyframes blink{from{opacity:1;}to{opacity:0.4;};}
+
+/* ================================================================
+   SCREEN 6: LESSON RESULT
+================================================================ */
+#screen-result{justify-content:center;}
+.result-wrap{
+  text-align:center;padding:30px 20px;
+  max-width:360px;width:100%;
+}
+.result-emoji{
+  font-size:4.5rem;margin-bottom:10px;
+  animation:bounce-in 0.6s cubic-bezier(0.175,0.885,0.32,1.275);
+}
+@keyframes bounce-in{
+  0%{transform:scale(0);}60%{transform:scale(1.2);}100%{transform:scale(1);}
+}
+.result-title{
+  font-size:1.8rem;font-weight:900;
+  background:linear-gradient(135deg,var(--gold),var(--gold2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  margin-bottom:6px;
+}
+.result-subtitle{
+  font-size:0.95rem;color:rgba(255,255,255,0.6);
+  margin-bottom:22px;
+}
+.result-stats{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+  margin-bottom:22px;
+}
+.result-stat-box{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:14px 8px;text-align:center;
+}
+.result-stat-box .stat-val{
+  font-size:1.6rem;font-weight:900;color:var(--gold);
+}
+.result-stat-box .stat-lbl{
+  font-size:0.75rem;color:rgba(255,255,255,0.5);margin-top:3px;
+}
+.stars-row{
+  display:flex;justify-content:center;gap:6px;
+  font-size:2.2rem;margin-bottom:20px;
+}
+.star-item{
+  animation:star-pop 0.3s ease forwards;
+  opacity:0;
+}
+.star-item:nth-child(1){animation-delay:0.2s;}
+.star-item:nth-child(2){animation-delay:0.5s;}
+.star-item:nth-child(3){animation-delay:0.8s;}
+@keyframes star-pop{
+  0%{opacity:0;transform:scale(0) rotate(-30deg);}
+  100%{opacity:1;transform:scale(1) rotate(0);}
+}
+.result-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(212,175,55,0.1);
+  border:1px solid rgba(212,175,55,0.3);
+  padding:8px 20px;border-radius:30px;
+  font-size:0.9rem;color:var(--gold);font-weight:700;
+  margin-bottom:20px;
+}
+.result-btns{display:flex;flex-direction:column;gap:10px;}
+.btn-primary-game{
+  padding:15px;border-radius:var(--radius);border:none;
+  background:linear-gradient(135deg,var(--gold),var(--gold2));
+  color:#000;font-family:var(--font);font-size:1rem;font-weight:900;
+  cursor:pointer;transition:var(--trans);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn-primary-game:hover{transform:translateY(-2px);box-shadow:var(--glow-gold);}
+.btn-secondary-game{
+  padding:13px;border-radius:var(--radius);
+  border:1.5px solid var(--border);
+  background:transparent;
+  color:var(--white);font-family:var(--font);font-size:0.95rem;font-weight:700;
+  cursor:pointer;transition:var(--trans);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn-secondary-game:hover{border-color:var(--gold);color:var(--gold);}
+
+/* ================================================================
+   SCREEN 7: FORTRESS COMPLETE
+================================================================ */
+#screen-fortress-win{justify-content:center;}
+.fortress-win-wrap{
+  text-align:center;padding:30px 20px;max-width:360px;width:100%;
+}
+.win-castle{
+  font-size:5rem;margin-bottom:10px;
+  animation:castle-float 2s ease-in-out infinite;
+  filter:drop-shadow(0 0 30px rgba(212,175,55,0.8));
+}
+@keyframes castle-float{
+  0%,100%{transform:translateY(0);}
+  50%{transform:translateY(-12px);}
+}
+.win-title{
+  font-size:1.9rem;font-weight:900;color:var(--gold);
+  margin-bottom:6px;
+}
+.win-sub{font-size:1rem;color:rgba(255,255,255,0.65);margin-bottom:24px;}
+.badge-earned{
+  background:linear-gradient(135deg,rgba(212,175,55,0.15),rgba(212,175,55,0.05));
+  border:2px solid var(--gold);
+  border-radius:var(--radius);
+  padding:20px 16px;margin-bottom:22px;
+  position:relative;overflow:hidden;
+}
+.badge-earned::before{
+  content:'✦';position:absolute;top:8px;right:12px;
+  color:rgba(212,175,55,0.3);font-size:1.5rem;
+}
+.badge-icon{font-size:3rem;margin-bottom:8px;}
+.badge-name{font-size:1.1rem;font-weight:900;color:var(--gold);}
+.badge-desc{font-size:0.82rem;color:rgba(255,255,255,0.55);margin-top:4px;}
+
+/* ================================================================
+   SCREEN 8: PROFILE / TROPHY ROOM
+================================================================ */
+#screen-profile{padding-top:80px;}
+.profile-wrap{width:100%;max-width:480px;padding:10px 16px 30px;}
+.profile-hero{
+  background:linear-gradient(135deg,rgba(212,175,55,0.1),rgba(212,175,55,0.03));
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:24px 16px;text-align:center;margin-bottom:16px;
+}
+.profile-avatar{font-size:3.5rem;margin-bottom:6px;}
+.profile-name{font-size:1.4rem;font-weight:900;color:var(--gold);}
+.profile-level-tag{
+  display:inline-block;
+  background:linear-gradient(135deg,var(--gold),var(--gold2));
+  color:#000;font-weight:900;font-size:0.85rem;
+  padding:4px 16px;border-radius:20px;margin:6px 0;
+}
+.profile-xp-bar-wrap{
+  height:8px;background:rgba(255,255,255,0.1);
+  border-radius:4px;overflow:hidden;margin:10px 0 4px;
+}
+.profile-xp-bar-fill{
+  height:100%;border-radius:4px;
+  background:linear-gradient(90deg,var(--gold),var(--gold2));
+  transition:width 0.8s ease;
+}
+.profile-xp-label{font-size:0.8rem;color:rgba(255,255,255,0.45);}
+.stats-grid{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:10px;
+  margin-bottom:16px;
+}
+.stat-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:16px;text-align:center;
+}
+.stat-card .s-icon{font-size:1.6rem;margin-bottom:4px;}
+.stat-card .s-val{font-size:1.4rem;font-weight:900;color:var(--gold);}
+.stat-card .s-lbl{font-size:0.75rem;color:rgba(255,255,255,0.45);margin-top:2px;}
+.badges-section h3{
+  font-size:1rem;font-weight:700;color:var(--gold);
+  margin-bottom:12px;
+}
+.badges-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+}
+.badge-cell{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:12px 4px;text-align:center;
+  position:relative;
+}
+.badge-cell .b-icon{font-size:1.8rem;}
+.badge-cell .b-name{font-size:0.65rem;color:rgba(255,255,255,0.5);margin-top:4px;}
+.badge-cell.locked-badge{filter:grayscale(1);opacity:0.35;}
+.badge-cell.locked-badge .b-icon::after{
+  content:'🔒';position:absolute;
+  bottom:28px;right:50%;transform:translateX(50%);
+  font-size:0.8rem;
+}
+
+/* ================================================================
+   MODAL OVERLAY
+================================================================ */
+.modal-overlay{
+  position:fixed;inset:0;z-index:500;
+  background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+.modal-overlay.open{display:flex;}
+.modal-box{
+  background:linear-gradient(160deg,#0d2035,#0a1520);
+  border:1.5px solid var(--border);
+  border-radius:var(--radius);
+  padding:30px 22px;text-align:center;
+  max-width:340px;width:100%;
+  animation:modal-in 0.35s cubic-bezier(0.175,0.885,0.32,1.275);
+}
+@keyframes modal-in{
+  from{transform:scale(0.7);opacity:0;}
+  to{transform:scale(1);opacity:1;}
+}
+.modal-box h2{font-size:1.4rem;font-weight:900;color:var(--gold);margin-bottom:8px;}
+.modal-box p{font-size:0.92rem;color:rgba(255,255,255,0.65);margin-bottom:20px;}
+
+/* ================================================================
+   BOTTOM NAV
+================================================================ */
+#bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;z-index:100;
+  display:none;
+  background:rgba(10,21,32,0.97);
+  backdrop-filter:blur(12px);
+  border-top:1px solid var(--border);
+  padding:8px 0;padding-bottom:calc(8px + env(safe-area-inset-bottom));
+}
+#bottom-nav.visible{display:flex;justify-content:space-around;align-items:center;}
+.nav-item{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:6px 16px;cursor:pointer;
+  color:rgba(255,255,255,0.4);font-size:0.7rem;font-weight:600;
+  transition:var(--trans);border-radius:8px;
+}
+.nav-item i{font-size:1.3rem;}
+.nav-item.active,.nav-item:hover{color:var(--gold);}
+.nav-item.active i{
+  filter:drop-shadow(0 0 6px rgba(212,175,55,0.7));
+}
+
+/* ================================================================
+   UTILITY
+================================================================ */
+.gold-text{color:var(--gold);}
+.center{text-align:center;}
+.mt-10{margin-top:10px;}
+.w100{width:100%;}
+.btn-icon-text{display:flex;align-items:center;gap:8px;justify-content:center;}
+.divider{height:1px;background:var(--border);margin:14px 0;}
+
+/* Section type colors */
+.st-paragraph .section-icon-circle{background:rgba(212,175,55,0.15);color:var(--gold);}
+.st-quote .section-icon-circle{background:rgba(41,128,185,0.15);color:#60b8e8;}
+.st-explanation .section-icon-circle{background:rgba(142,68,173,0.15);color:#c39bd3;}
+.st-application .section-icon-circle{background:rgba(39,174,96,0.15);color:#82e0aa;}
+.st-benefit .section-icon-circle{background:rgba(230,126,34,0.15);color:#f0b27a;}
+
+/* Smooth scrolling for content screen */
+#screen-lesson{overflow-y:auto;}
+.screen{-webkit-overflow-scrolling:touch;}
+
+/* XP popup */
+.xp-popup{
+  position:fixed;z-index:400;
+  pointer-events:none;
+  font-size:1.2rem;font-weight:900;
+  color:var(--gold2);
+  text-shadow:0 2px 8px rgba(0,0,0,0.5);
+  animation:xp-float 1.5s ease-out forwards;
+}
+@keyframes xp-float{
+  0%{opacity:1;transform:translateY(0) scale(1);}
+  100%{opacity:0;transform:translateY(-60px) scale(0.8);}
+}
+
+/* Streak flame */
+.streak-flame{
+  animation:flame-flicker 0.8s ease-in-out infinite alternate;
+}
+@keyframes flame-flicker{
+  from{filter:hue-rotate(-10deg) brightness(1);}
+  to{filter:hue-rotate(10deg) brightness(1.3);}
+}
+
+/* Confetti */
+.confetti-piece{
+  position:fixed;pointer-events:none;z-index:600;
+  width:8px;height:8px;border-radius:2px;
+  animation:confetti-fall var(--dur,2s) ease-in var(--delay,0s) forwards;
+}
+@keyframes confetti-fall{
+  0%{transform:translateY(-20px) rotate(0deg);opacity:1;}
+  100%{transform:translateY(100vh) rotate(720deg);opacity:0;}
+}
+
+/* Responsive tweaks */
+@media(max-width:380px){
+  .welcome-title{font-size:1.9rem;}
+  .avatar-opt{font-size:1.4rem;}
+  .fortress-icon-wrap{width:50px;height:50px;font-size:1.5rem;}
+}
+
+
+/* ===== ADMIN COURSE BUILDER ===== */
+.admin-wrap{
+  width:100%;max-width:980px;margin:0 auto;padding:82px 16px 110px;color:var(--text);
+}
+.admin-hero{
+  background:linear-gradient(135deg,rgba(212,175,55,.16),rgba(46,139,87,.12));
+  border:1px solid rgba(212,175,55,.25);border-radius:18px;padding:18px;margin-bottom:14px;
+}
+.admin-hero h2{margin:0 0 6px;font-size:1.35rem;color:var(--gold);}
+.admin-hero p{margin:0;color:rgba(255,255,255,.72);font-size:.9rem;line-height:1.7;}
+.admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;}
+.admin-panel{
+  background:rgba(13,31,45,.82);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:16px;
+  box-shadow:0 12px 30px rgba(0,0,0,.18);
+}
+.admin-panel.full{grid-column:1/-1;}
+.admin-panel h3{margin:0 0 12px;color:#fff;font-size:1rem;display:flex;gap:8px;align-items:center;}
+.admin-field{margin-bottom:10px;}
+.admin-field label{display:block;font-size:.78rem;color:rgba(255,255,255,.68);margin-bottom:5px;font-weight:800;}
+.admin-field input,.admin-field select,.admin-field textarea{
+  width:100%;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.08);color:#fff;
+  border-radius:10px;padding:10px 12px;font-family:var(--font);font-size:.9rem;outline:none;
+}
+.admin-field select option{color:#111;}
+.admin-field textarea{min-height:120px;resize:vertical;line-height:1.7;}
+.admin-field .hint{font-size:.7rem;color:rgba(255,255,255,.46);margin-top:4px;line-height:1.5;}
+.admin-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+.admin-btn{
+  border:0;border-radius:999px;padding:10px 14px;font-family:var(--font);font-weight:900;cursor:pointer;
+  display:inline-flex;align-items:center;gap:7px;transition:transform .2s ease,filter .2s ease;
+}
+.admin-btn:hover{transform:translateY(-1px);filter:brightness(1.08);}
+.admin-btn.primary{background:var(--gold);color:#111;}
+.admin-btn.secondary{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.1);}
+.admin-btn.danger{background:#c0392b;color:#fff;}
+.admin-list{display:grid;gap:10px;}
+.admin-course-item{border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px;background:rgba(255,255,255,.055);}
+.admin-course-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;}
+.admin-course-title{display:flex;align-items:center;gap:8px;color:#fff;font-weight:900;}
+.admin-course-title .admin-emoji{font-size:1.45rem;}
+.admin-course-meta{font-size:.75rem;color:rgba(255,255,255,.55);}
+.admin-lesson-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:10px;background:rgba(0,0,0,.16);margin-top:6px;}
+.admin-lesson-row span{font-size:.82rem;color:rgba(255,255,255,.82);}
+.admin-small-btn{border:0;border-radius:999px;padding:6px 9px;font-family:var(--font);font-weight:800;cursor:pointer;background:rgba(255,255,255,.12);color:#fff;}
+.admin-small-btn.danger{background:rgba(192,57,43,.9);}
+.admin-message{display:none;margin-top:10px;border-radius:10px;padding:9px 12px;font-weight:800;font-size:.82rem;}
+.admin-message.ok{display:block;background:rgba(39,174,96,.16);color:#7bed9f;border:1px solid rgba(39,174,96,.35);}
+.admin-message.err{display:block;background:rgba(231,76,60,.16);color:#ff9b91;border:1px solid rgba(231,76,60,.35);}
+@media(max-width:760px){.admin-grid{grid-template-columns:1fr}.admin-wrap{padding-left:12px;padding-right:12px}.admin-course-head{align-items:flex-start;flex-direction:column}.admin-actions{flex-direction:column}.admin-btn{justify-content:center;width:100%;}}
+
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     BACKGROUND STARS
+============================================================ -->
+<div id="starfield"></div>
+<div id="particles-container"></div>
+<div id="floating-text"></div>
+
+<!-- ============================================================
+     HUD
+============================================================ -->
+<div id="hud">
+  <div id="hud-level">⭐ مستوى 1</div>
+  <div class="hud-stat" id="hud-xp">
+    <span class="icon">✨</span><span id="hud-xp-val">0</span> XP
+  </div>
+  <div class="hud-xp-bar">
+    <div class="hud-xp-bar-fill" id="hud-xp-bar" style="width:0%"></div>
+  </div>
+  <div class="hud-stat" id="hud-gems">
+    <span class="icon">💎</span><span id="hud-gems-val">0</span>
+  </div>
+  <div class="hud-stat" id="hud-streak">
+    <span class="icon streak-flame">🔥</span><span id="hud-streak-val">0</span>
+  </div>
+</div>
+
+<!-- ============================================================
+     BOTTOM NAV
+============================================================ -->
+<div id="bottom-nav">
+  <div class="nav-item active" onclick="showMap()" id="nav-map">
+    <i class="fas fa-map"></i><span>الخريطة</span>
+  </div>
+  <div class="nav-item" onclick="showProfile()" id="nav-profile">
+    <i class="fas fa-trophy"></i><span>بطلي</span>
+  </div>
+  <div class="nav-item" onclick="showAdmin()" id="nav-admin">
+    <i class="fas fa-pen-to-square"></i><span>إدارة</span>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREENS
+============================================================ -->
+
+<!-- SCREEN 1: WELCOME -->
+<div class="screen active" id="screen-welcome">
+  <div style="padding:40px 0 0;display:flex;flex-direction:column;align-items:center;width:100%;max-width:380px;padding:40px 20px;">
+    <div class="welcome-castle">🏰</div>
+    <h1 class="welcome-title">حصون الإيمان</h1>
+    <p class="welcome-sub">رحلة الفارس المؤمن — ابن حصنك الآن!</p>
+    
+    <div class="welcome-form" id="welcome-form">
+      <div>
+        <div class="label-small">🦸 اختر اسم فارسك</div>
+        <div class="input-group">
+          <i class="fas fa-user-shield"></i>
+          <input class="game-input" id="player-name" type="text" placeholder="اسمك هنا..." maxlength="20"/>
+        </div>
+      </div>
+
+      <div>
+        <div class="label-small">🎭 اختر شخصيتك</div>
+        <div class="avatar-grid" id="avatar-grid">
+          <div class="avatar-opt" data-av="🦁" onclick="chooseAvatar(this)">🦁</div>
+          <div class="avatar-opt" data-av="🦅" onclick="chooseAvatar(this)">🦅</div>
+          <div class="avatar-opt" data-av="⚔️" onclick="chooseAvatar(this)">⚔️</div>
+          <div class="avatar-opt" data-av="🌟" onclick="chooseAvatar(this)">🌟</div>
+          <div class="avatar-opt" data-av="🛡️" onclick="chooseAvatar(this)">🛡️</div>
+          <div class="avatar-opt" data-av="🌙" onclick="chooseAvatar(this)">🌙</div>
+          <div class="avatar-opt" data-av="🏹" onclick="chooseAvatar(this)">🏹</div>
+          <div class="avatar-opt" data-av="🌺" onclick="chooseAvatar(this)">🌺</div>
+          <div class="avatar-opt" data-av="🦋" onclick="chooseAvatar(this)">🦋</div>
+          <div class="avatar-opt" data-av="🌹" onclick="chooseAvatar(this)">🌹</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="label-small">🎂 عمرك</div>
+        <div class="age-grid" id="age-grid">
+          <div class="age-opt" data-age="9" onclick="chooseAge(this)">9</div>
+          <div class="age-opt" data-age="10" onclick="chooseAge(this)">10</div>
+          <div class="age-opt" data-age="11" onclick="chooseAge(this)">11</div>
+          <div class="age-opt" data-age="12" onclick="chooseAge(this)">12</div>
+          <div class="age-opt" data-age="13" onclick="chooseAge(this)">13</div>
+          <div class="age-opt" data-age="14" onclick="chooseAge(this)">14</div>
+          <div class="age-opt" data-age="15" onclick="chooseAge(this)">15</div>
+          <div class="age-opt" data-age="16+" onclick="chooseAge(this)">16+</div>
+        </div>
+      </div>
+
+      <button class="btn-primary-game w100" onclick="startGame()" style="margin-top:6px;">
+        <span>🚀 ابدأ المغامرة!</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 2: MAP -->
+<div class="screen" id="screen-map">
+  <div class="map-header">
+    <h1>🗺️ خريطة الحصون</h1>
+    <p class="player-greeting" id="map-greeting">أهلاً بك يا فارس!</p>
+  </div>
+  <div class="map-grid" id="map-grid"></div>
+</div>
+
+<!-- SCREEN 3: LESSONS LIST -->
+<div class="screen" id="screen-lessons">
+  <div class="back-bar">
+    <button class="btn-back-game" onclick="showMap()">
+      <i class="fas fa-arrow-right"></i> الخريطة
+    </button>
+    <span class="lesson-fortress-title" id="lesson-fortress-title">الحصن الأول</span>
+  </div>
+  <div class="lessons-list" id="lessons-list"></div>
+</div>
+
+<!-- SCREEN 4: LESSON READER -->
+<div class="screen" id="screen-lesson">
+  <div class="back-bar">
+    <button class="btn-back-game" id="lesson-back-btn">
+      <i class="fas fa-arrow-right"></i> عودة
+    </button>
+    <span class="lesson-fortress-title" id="lesson-reading-title">الدرس</span>
+  </div>
+  <div class="lesson-content-wrap" id="lesson-content-wrap">
+    <!-- dynamic -->
+  </div>
+</div>
+
+<!-- SCREEN 5: QUIZ -->
+<div class="screen" id="screen-quiz">
+  <div class="quiz-wrap">
+    <div class="quiz-timer" id="quiz-timer">⏱ 20</div>
+    <div class="quiz-progress-bar">
+      <div class="quiz-progress-fill" id="quiz-prog-fill" style="width:0%"></div>
+    </div>
+    <div class="quiz-q-num" id="quiz-q-num">السؤال 1 من 3</div>
+    <div class="quiz-question" id="quiz-question"></div>
+    <div class="quiz-options" id="quiz-options"></div>
+    <div class="quiz-feedback" id="quiz-feedback"></div>
+    <button class="btn-next-q" id="btn-next-q" onclick="nextQuestion()">
+      <span id="next-q-label">التالي</span> <i class="fas fa-arrow-left"></i>
+    </button>
+  </div>
+</div>
+
+<!-- SCREEN 6: LESSON RESULT -->
+<div class="screen" id="screen-result">
+  <div class="result-wrap">
+    <div class="result-emoji" id="result-emoji">🌟</div>
+    <h2 class="result-title" id="result-title">أحسنت!</h2>
+    <p class="result-subtitle" id="result-subtitle">أكملت الدرس بنجاح</p>
+    <div class="stars-row" id="result-stars"></div>
+    <div class="result-stats">
+      <div class="result-stat-box">
+        <div class="stat-val" id="res-xp">+50</div>
+        <div class="stat-lbl">نقاط XP</div>
+      </div>
+      <div class="result-stat-box">
+        <div class="stat-val" id="res-correct">3/3</div>
+        <div class="stat-lbl">إجابات صحيحة</div>
+      </div>
+      <div class="result-stat-box">
+        <div class="stat-val" id="res-gems">+2</div>
+        <div class="stat-lbl">جواهر</div>
+      </div>
+    </div>
+    <div class="result-badge" id="result-badge" style="display:none"></div>
+    <div class="result-btns">
+      <button class="btn-primary-game" id="btn-result-next" onclick="goNextLesson()">
+        <i class="fas fa-arrow-left"></i> الدرس التالي
+      </button>
+      <button class="btn-secondary-game" onclick="showLessons()">
+        <i class="fas fa-list"></i> قائمة الدروس
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 7: FORTRESS COMPLETE -->
+<div class="screen" id="screen-fortress-win">
+  <div class="fortress-win-wrap">
+    <div class="win-castle" id="fw-icon">🏰</div>
+    <h2 class="win-title" id="fw-title">أكملت الحصن!</h2>
+    <p class="win-sub" id="fw-sub">أنت فارس حقيقي</p>
+    <div class="badge-earned">
+      <div class="badge-icon" id="fw-badge-icon">🥇</div>
+      <div class="badge-name" id="fw-badge-name">شارة الحصن الأول</div>
+      <div class="badge-desc" id="fw-badge-desc">أكملت كل دروس الحصن بنجاح</div>
+    </div>
+    <div class="result-stats">
+      <div class="result-stat-box">
+        <div class="stat-val" id="fw-xp">+500</div>
+        <div class="stat-lbl">مكافأة XP</div>
+      </div>
+      <div class="result-stat-box">
+        <div class="stat-val" id="fw-gems">+20</div>
+        <div class="stat-lbl">جواهر</div>
+      </div>
+      <div class="result-stat-box">
+        <div class="stat-val" id="fw-level">↑</div>
+        <div class="stat-lbl">مستوى جديد</div>
+      </div>
+    </div>
+    <div class="result-btns" style="margin-top:20px;">
+      <button class="btn-primary-game" onclick="showMap()">
+        <i class="fas fa-map"></i> الحصن التالي!
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 8: PROFILE -->
+<div class="screen" id="screen-profile">
+  <div class="back-bar">
+    <button class="btn-back-game" onclick="showMap()">
+      <i class="fas fa-arrow-right"></i> الخريطة
+    </button>
+    <span class="lesson-fortress-title">بطاقة الفارس</span>
+  </div>
+  <div class="profile-wrap" id="profile-wrap"></div>
+</div>
+
+<!-- SCREEN 9: ADMIN -->
+<div class="screen" id="screen-admin">
+  <div class="admin-wrap">
+    <div class="back-bar">
+      <button class="btn-back-game" onclick="showMap()">
+        <i class="fas fa-arrow-right"></i> الخريطة
+      </button>
+      <span class="lesson-fortress-title">لوحة إدارة الدورات</span>
+    </div>
+    <div class="admin-hero">
+      <h2>بناء الدورات</h2>
+      <p>أضف دوراتك الخاصة وأضف إليها الدروس. بإمكانك إضافة كل من درس دورة وتعديل محتوى الدرس في المحرر ثم الاختبارات اليدوية في الإعدادات المتاحة.</p>
+    </div>
+    <div class="admin-grid">
+      <div class="admin-panel">
+        <h3><i class="fas fa-book"></i> إضافة دورة</h3>
+        <div class="admin-field"><label>عنوان الدورة</label><input id="admin-course-title" placeholder="مثال: أذكار الصباح" /></div>
+        <div class="admin-field"><label>رمز الدورة</label><input id="admin-course-emoji" maxlength="4" placeholder="📖" /></div>
+        <div class="admin-field"><label>لون الدورة</label><input id="admin-course-color" type="color" value="#2E8B57" /></div>
+        <div class="admin-actions"><button class="admin-btn primary" onclick="adminAddCourse()"><i class="fas fa-plus"></i> إضافة الدورة</button></div>
+        <div class="admin-message" id="admin-course-msg"></div>
+      </div>
+      <div class="admin-panel">
+        <h3><i class="fas fa-scroll"></i> إضافة درس</h3>
+        <div class="admin-field"><label>اختر الدورة</label><select id="admin-lesson-course"></select></div>
+        <div class="admin-field"><label>عنوان الدرس</label><input id="admin-lesson-title" placeholder="مثال: أذكار المساء" /></div>
+        <div class="admin-field"><label>محتوى الدرس HTML</label><textarea id="admin-lesson-content" placeholder="<p><strong>الفقرة الأساسية:</strong> ...</p>"></textarea></div>
+        <div class="admin-field"><label>أسئلة الاختبار</label><textarea id="admin-lesson-quiz" placeholder="السؤال | خيار 1 | خيار 2 | خيار 3 | خيار 4 | رقم الإجابة الصحيحة 1-4"></textarea><div class="hint">سطر لكل سؤال. كل سؤال يحتوي على السؤال والخيارات ورقم الإجابة مفصولة بـ |</div></div>
+        <div class="admin-actions"><button class="admin-btn primary" onclick="adminAddLesson()"><i class="fas fa-plus"></i> إضافة الدرس</button></div>
+        <div class="admin-message" id="admin-lesson-msg"></div>
+      </div>
+      <div class="admin-panel full">
+        <h3><i class="fas fa-layer-group"></i> الدورات المضافة</h3>
+        <div class="admin-actions" style="margin-bottom:12px;">
+          <button class="admin-btn secondary" onclick="adminExportData()"><i class="fas fa-file-export"></i> تصدير JSON</button>
+          <button class="admin-btn secondary" onclick="adminImportData()"><i class="fas fa-file-import"></i> استيراد JSON</button>
+          <button class="admin-btn danger" onclick="adminClearCustomData()"><i class="fas fa-trash"></i> حذف كل الدورات</button>
+        </div>
+        <div id="admin-list" class="admin-list"></div>
+        <div class="admin-message" id="admin-main-msg"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: FIRST TIME -->
+<div class="modal-overlay" id="modal-start">
+  <div class="modal-box">
+    <div style="font-size:3rem;margin-bottom:8px;">🏰</div>
+    <h2>مرحباً يا فارس!</h2>
+    <p>ستبني قلعة الإيمان حصناً حصناً. كل درس = لبنة جديدة. اجمع النجوم والجواهر وتسلّق المستويات!</p>
+    <button class="btn-primary-game w100" id="btn-start-adventure" onclick="closeModal('modal-start'); showMap();">
+      🚀 لنبدأ المغامرة!
+    </button>
+  </div>
+</div>
+
+<!-- MODAL: XP LEVEL UP -->
+<div class="modal-overlay" id="modal-levelup">
+  <div class="modal-box">
+    <div style="font-size:3rem;margin-bottom:8px;">🎉</div>
+    <h2 id="levelup-title">ارتقيت مستوى!</h2>
+    <p id="levelup-desc">أنت الآن في مستوى جديد. واصل التقدم!</p>
+    <button class="btn-primary-game w100" onclick="closeModal('modal-levelup')">
+      💪 رائع!
+    </button>
+  </div>
+</div>
+
+<script>
+// ================================================================
+// VERSION & CONSTANTS
+// ================================================================
+const GAME_VERSION = "2.1";
+
+// ================================================================
+// RAW COURSES CONTENT (only "أركان الإيمان")
+// ================================================================
+const rawCourses = [{
+id: 1,
+title: "أركان الإيمان",
+icon: "fa-star",
+color: "#D4AF37",
+lessons: [
+{
+title: "الدرس الأول: ما هو التوحيد؟",
+content: `<p><strong>الفقرة الأساسية:</strong> التوحيد هو أن تعرف أن الله واحد لا شريك له، وتُفرده وحده بالعبادة دون سواه. وهو السبب الأول الذي خلقك الله من أجله، وبه تبدأ رحلة المسلم مع ربه.</p>
+<p><strong>الدليل:</strong> قال الله تعالى: ﴿وَمَا خَلَقْتُ الْجِنَّ وَالْإِنسَ إِلَّا لِيَعْبُدُونِ﴾ [الذاريات: 56].</p>
+<p><strong>الشرح المختصر:</strong> تخيّل أنك تبني بيتاً — لا بد أن يكون له أساس صلب وإلا انهار. التوحيد هو الأساس الذي يقوم عليه كل شيء في الإسلام. ومعنى "أفردت الله بالعبادة" أي أنك تصلي لله وحده، وتدعو الله وحده، وتخاف الله وتتوكل عليه وحده. لا تشرك معه ملكاً ولا نبياً ولا حجراً. والله هو الذي خلقك وخلق السماء والأرض وكل شيء — فهو وحده المستحق للعبادة.</p>
+<p><strong>النموذج التطبيقي:</strong> اليوم بعد كل صلاة، قل ثلاث مرات: "لا إله إلا الله وحده لا شريك له، له الملك وله الحمد وهو على كل شيء قدير." واشعر بمعناها وأنت تقولها.</p>
+<p><strong>الفائدة التربوية:</strong> من عرف أن الله هو الخالق الرازق المحيي المميت — امتلأ قلبه بالأمل والسكينة، ولم يخشَ أحداً إلا الله. والتوحيد الحقيقي يمنحك قوةً داخلية لا تُهزم.</p>`
+},
+{
+title: "الدرس الثاني: أنواع التوحيد",
+content: `<p><strong>الفقرة الأساسية:</strong> التوحيد ثلاثة أنواع مترابطة: توحيد الربوبية (الاعتراف بأن الله هو الخالق الرازق المدبّر)، وتوحيد الألوهية (إفراد الله بالعبادة كلها)، وتوحيد الأسماء والصفات (إثبات ما أثبته الله لنفسه دون تشبيه أو تعطيل).</p>
+<p><strong>الدليل:</strong> قال الله تعالى: ﴿قُلْ هُوَ اللَّهُ أَحَدٌ * اللَّهُ الصَّمَدُ * لَمْ يَلِدْ وَلَمْ يُولَدْ * وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ﴾ [الإخلاص: 1-4].</p>
+<p><strong>الشرح المختصر:</strong> لنضرب مثلاً بسيطاً: المشركون القدامى كانوا يؤمنون بتوحيد الربوبية — يعرفون أن الله خلقهم — لكنهم أشركوا في توحيد الألوهية؛ لأنهم عبدوا الأصنام. فالإيمان الصحيح يجمع الأنواع الثلاثة: أؤمن أن الله ربي الخالق، وأعبده وحده، وأؤمن بأسمائه الحسنى كما جاءت. سورة الإخلاص وحدها تحتوي على النوعين الأولين بشكل جميل وواضح.</p>
+<p><strong>النموذج التطبيقي:</strong> اقرأ سورة الإخلاص بتدبر، ثم حاول أن تذكر مثالاً واحداً من حياتك لكل نوع من أنواع التوحيد الثلاثة.</p>
+<p><strong>الفائدة التربوية:</strong> فهم أنواع التوحيد يعصمك من الوقوع في الشرك الخفي — كالتوكل على الأسباب أكثر من التوكل على الله، أو الدعاء بأسماء غير الله في الضيق.</p>`
+},
+{
+title: "الدرس الثالث: الإيمان بأسماء الله الحسنى",
+content: `<p><strong>الفقرة الأساسية:</strong> لله تسعة وتسعون اسماً حسناً، كلها دالة على كمال مطلق. نؤمن بها كما وردت في القرآن والسنة، نثبتها لله دون أن نشبّهها بصفات المخلوقين، ودون أن نعطّلها أو ننكر معناها.</p>
+<p><strong>الدليل:</strong> قال الله تعالى: ﴿لَيْسَ كَمِثْلِهِ شَيْءٌ ۖ وَهُوَ السَّمِيعُ الْبَصِيرُ﴾ [الشورى: 11]، وقال النبي ﷺ: «إِنَّ لِلَّهِ تِسْعَةً وَتِسْعِينَ اسْماً مِائَةً إِلَّا وَاحِداً، مَنْ أَحْصَاهَا دَخَلَ الْجَنَّةَ» (رواه البخاري، رقم 2736، ومسلم، رقم 2677).</p>
+<p><strong>الشرح المختصر:</strong> "الرحمن" يعني أن رحمة الله تسبق كل شيء. "القدير" يعني أن الله قادر على كل شيء بلا حدود. "السميع" يعني أنه يسمع كل همسة في قلبك قبل أن تنطق بها. كيف نؤمن بهذه الأسماء؟ نقول: الله سميع بصير، لكن سمعه وبصره لا يشبهان سمعنا وبصرنا. نثبت المعنى ولا نشبّه الكيفية. إحصاء الأسماء يعني: حفظها، وفهمها، والعمل بمقتضاها.</p>
+<p><strong>النموذج التطبيقي:</strong> اختر اليوم اسماً واحداً من أسماء الله — مثلاً "الشكور" — وابحث عن معناه، ثم ادعُ الله به قبل النوم.</p>
+<p><strong>الفائدة التربوية:</strong> كلما تعلمت اسماً من أسماء الله ازداد حبك له وقرّبك منه. إذا مررت بضيق، فتذكر "اللطيف الخبير" — وستجد في قلبك طمأنينة لا تُعبّر عنها.</p>`
+},
+{
+title: "الدرس الرابع: محبة الله وخوفه ورجاؤه",
+content: `<p><strong>الفقرة الأساسية:</strong> عبادة الله الصحيحة تقوم على ثلاثة أعمدة لا ينفصل أحدها عن الآخر: محبة الله (وهي الأصل)، والخوف من عقابه (حتى لا تُقدم على المعاصي)، والرجاء في رحمته (حتى لا تيأس). وغياب أي منها يُخل بالعبادة.</p>
+<p><strong>الدليل:</strong> قال الله تعالى عن المؤمنين: ﴿يَدْعُونَ رَبَّهُمْ خَوْفًا وَطَمَعًا﴾ [السجدة: 16]، وقال: ﴿وَالَّذِينَ آمَنُوا أَشَدُّ حُبًّا لِّلَّهِ﴾ [البقرة: 165].</p>
+<p><strong>الشرح المختصر:</strong> تخيّل طيراً يطير بجناحين: جناح الخوف وجناح الرجاء. لو كسر جناح الخوف تماماً — تجرّأ على المعاصي. ولو كسر جناح الرجاء — أصابه اليأس. ولو فُقد الحب — صارت العبادة كرهاً وقسراً. الإيمان الصحيح يجمع الثلاثة. فأنت تحب الله لأنه رزقك وخلقك وأنعم عليك، وتخاف من عقابه فتبتعد عن الذنوب، وترجو رحمته فتتوب كلما أخطأت.</p>
+<p><strong>النموذج التطبيقي:</strong> ادعُ الله اليوم دعاءً من قلبك — ابدأ بالثناء عليه محبةً، ثم سله خائفاً أن يغفر لك ذنوبك، ثم اختم بالرجاء في رحمته الواسعة.</p>
+<p><strong>الفائدة التربوية:</strong> صاحب المحبة الصادقة لله يُقبل على العبادة بشوق لا بثقل، ويتوب من الذنب بسرعة لأنه لا يطيق البُعد عن ربه.</p>`
+},
+{
+title: "الدرس الخامس: الإيمان بالملائكة",
+content: `<p><strong>الفقرة الأساسية:</strong> الملائكة مخلوقات نورانية خلقها الله من نور، لا يأكلون ولا يشربون ولا يتعبون، لا يعصون الله طرفة عين، ولكل منهم مهمة محددة في هذا الكون.</p>
+<p><strong>الدليل:</strong> قال الله تعالى: ﴿لَّا يَعْصُونَ اللَّهَ مَا أَمَرَهُمْ وَيَفْعَلُونَ مَا يُؤْمَرُونَ﴾ [التحريم: 6]، وقال النبي ﷺ: «خُلِقَتِ الْمَلَائِكَةُ مِنْ نُورٍ» (رواه مسلم، رقم 2996).</p>
+<p><strong>الشرح المختصر:</strong> من الملائكة جبريل عليه السلام، الأمين على الوحي. ومنهم ميكائيل الموكّل بالأمطار والأرزاق. ومنهم إسرافيل الذي ينفخ في الصور يوم القيامة. ومنهم ملكا الكرام الكاتبين — وهما الآن معك — يكتبان كل قول وعمل. ومنهم الحفظة الذين يحرسونك. الملائكة لا يشبهون البشر، وإيمانك بهم يجعلك تستحي أن تفعل سيئة وملك الله يراك.</p>
+<p><strong>النموذج التطبيقي:</strong> قبل أن تنام الليلة، تذكّر أن ملكاً كتب كل ما قلته وفعلته اليوم. راجع يومك: هل أنت راضٍ عما سيُكتب في صحيفتك؟</p>
+<p><strong>الفائدة التربوية:</strong> استشعار وجود الملائكة الكاتبين يُعلّمك الرقابة الذاتية — فتتحاشى الخطأ ليس خوفاً من البشر، بل لأن الله يراك وملائكته تكتب.</p>`
+},
+{
+title: "الدرس السادس: الإيمان بالكتب السماوية",
+content: `<p><strong>الفقرة الأساسية:</strong> أنزل الله كتبه على أنبيائه هداية للبشر. ومن هذه الكتب: التوراة على موسى، والإنجيل على عيسى، والزبور على داود، والقرآن الكريم على سيدنا محمد ﷺ. والقرآن هو الكتاب الخاتم، الذي تكفّل الله بحفظه إلى يوم القيامة.</p>
+<p><strong>الدليل:</strong> قال الله تعالى: ﴿إِنَّا نَحْنُ نَزَّلْنَا الذِّكْرَ وَإِنَّا لَهُ لَحَافِظُونَ﴾ [الحجر: 9].</p>
+<p><strong>الشرح المختصر:</strong> الكتب السابقة (التوراة والإنجيل) أُنزلت لزمان ومكان محددين، وقد دخلها التحريف على مرّ القرون. أما القرآن الكريم، فإن الله تكفّل بحفظه بنفسه — ولهذا ظل القرآن كما نزل على النبي ﷺ منذ أربعة عشر قرناً دون تغيير حرف واحد. وهذا معجزة لا نظير لها في تاريخ البشرية. إيمانك بالكتب يعني: تصديقها جميعاً، والعمل بما جاء به القرآن.</p>
+<p><strong>النموذج التطبيقي:</strong> اقرأ اليوم ربع حزب من القرآن بتدبر وتمعن — وتذكر أنك تقرأ كلام الله الذي حفظه بنفسه.</p>
+<p><strong>الفائدة التربوية:</strong> حين تعرف أن القرآن كلام الله المحفوظ — يتغير تعاملك معه؛ تقرأه بتعظيم وتدبّر، لا مجرد تلاوة سريعة للبركة.</p>`
+},
+{
+title: "الدرس السابع: الإيمان بالرسل والأنبياء",
+content: `<p><strong>الفقرة الأساسية:</strong> أرسل الله أنبياء ورسلاً إلى البشر ليُبلّغوا رسالات ربهم، وأولهم آدم عليه السلام وآخرهم سيدنا محمد ﷺ خاتم الأنبياء والمرسلين. الإيمان بهم جميعاً واجب، والكفر بنبي واحد كالكفر بهم كلهم.</p>
+<p><strong>الدليل:</strong> قال الله تعالى: ﴿مَّا كَانَ مُحَمَّدٌ أَبَا أَحَدٍ مِّن رِّجَالِكُمْ وَلَٰكِن رَّسُولَ اللَّهِ وَخَاتَمَ النَّبِيِّينَ﴾ [الأحزاب: 40].</p>
+<p><strong>الشرح المختصر:</strong> الأنبياء لم يأتوا بآراء شخصية، بل بلّغوا وحي الله بأمانة. وجميع الأنبياء اتفقوا على مبدأ واحد: التوحيد. الفرق أن كل نبي جاء لقومه في زمان معين، أما النبي محمد ﷺ فرسالته للبشرية كلها إلى يوم القيامة. وله صفات خاصة به: الصدق، والأمانة، والتبليغ، والفطنة، والعصمة من الكذب. الإيمان بالرسل يعني: التصديق بوجودهم، والمحبة لهم، والاتباع لخاتمهم ﷺ.</p>
+<p><strong>النموذج التطبيقي:</strong> اكتب اليوم أسماء خمسة أنبياء تعرفهم، واكتب بجوار كل اسم درساً واحداً من قصة ذلك النبي يمكنك تطبيقه في حياتك.</p>
+<p><strong>الفائدة التربوية:</strong> محبة الأنبياء تعني اتباعهم لا مجرد ذكرهم. وأعلى درجات محبة النبي ﷺ أن تتّبع سنته في كل صغيرة وكبيرة.</p>`
+},
+{
+title: "الدرس الثامن: الإيمان باليوم الآخر",
+content: `<p><strong>الفقرة الأساسية:</strong> اليوم الآخر هو يوم يُبعث فيه الناس من قبورهم ويُحاسبون على أعمالهم، ثم يدخلون إما الجنة أو النار. والإيمان به يشمل: الإيمان بالبعث، والحشر، والحساب، والميزان، والصراط، والجنة، والنار.</p>
+<p><strong>الدليل:</strong> قال الله تعالى: ﴿فَمَن يَعْمَلْ مِثْقَالَ ذَرَّةٍ خَيْرًا يَرَهُ * وَمَن يَعْمَلْ مِثْقَالَ ذَرَّةٍ شَرًّا يَرَهُ﴾ [الزلزلة: 7-8].</p>
+<p><strong>الشرح المختصر:</strong> تخيّل يوماً يقف فيه كل إنسان من لحظة خلقه إلى لحظة موته — ليُحاسب على كل كلمة، وكل نظرة، وكل لحظة وحدة مع الله. هذا اليوم حقيقي لا شك فيه. والإيمان به يعني أنك تعيش حياتك كأنك في مشروع طويل تجمع فيه حسناتك — كل صلاة، وكل مساعدة، وكل كلمة طيبة. أما الذي لا يؤمن باليوم الآخر فيعيش لأجل الدنيا فقط، وكأنه يبني بيتاً من ورق.</p>
+<p><strong>النموذج التطبيقي:</strong> اليوم، قبل أن تنام، اكتب في ورقة ثلاثة أعمال صالحة فعلتها اليوم تودّ أن تراها في ميزانك يوم القيامة. وإن لم تجد، فقرّر أن تبدأ غداً.</p>
+<p><strong>الفائدة التربوية:</strong> الإيمان باليوم الآخر هو أقوى دافع للعمل الصالح — لأن الذي يعمل ابتغاء الجنة لا يحتاج إلى رقابة بشرية ليكون صادقاً وأميناً.</p>`
+},
+{
+title: "الدرس التاسع: الإيمان بالقدر خيره وشره",
+content: `<p><strong>الفقرة الأساسية:</strong> الإيمان بالقدر يعني الإيمان بأن الله علم بكل شيء قبل أن يخلقه، وكتبه في اللوح المحفوظ، وشاءه بإرادته، وخلقه بقدرته. وهذا لا يعني أن الإنسان مُسيَّر، بل له إرادة واختيار يُحاسَب عليها.</p>
+<p><strong>الدليل:</strong> قال الله تعالى: ﴿إِنَّا كُلَّ شَيْءٍ خَلَقْنَاهُ بِقَدَرٍ﴾ [القمر: 49]، وقال النبي ﷺ: «وَاعْلَمْ أَنَّ مَا أَصَابَكَ لَمْ يَكُنْ لِيُخْطِئَكَ، وَمَا أَخْطَأَكَ لَمْ يَكُنْ لِيُصِيبَكَ» (رواه أبو داود، رقم 4699، وصحّحه الألباني).</p>
+<p><strong>الشرح المختصر:</strong> الإيمان بالقدر له مرتبتان: ما يتعلق بقضاء الله عليك — كالمرض والموت وضيق الرزق — فتصبر وترضى وتعلم أنه خير. وما يتعلق بأفعالك أنت — فتجتهد وتعمل، ولا تقل "هذا قدر" لتبرر كسلك أو معصيتك. الخلاصة: خذ بالأسباب، ثم توكّل على الله في النتيجة.</p>
+<p><strong>النموذج التطبيقي:</strong> إذا حدث لك شيء تكره اليوم — فقل: "قدّره الله وما شاء فعل" — ثم اسأل نفسك: ما الذي أستطيع فعله بعد هذا؟ وهذا هو معنى الجمع بين القدر والعمل.</p>
+<p><strong>الفائدة التربوية:</strong> الإيمان بالقدر يمنحك السكينة في المصائب، والشكر في النعم، والصبر في البلاء — فلا تجزع ولا تيأس مهما اشتد الأمر.</p>`
+},
+{
+title: "الدرس العاشر: الشرك بالله وخطورته",
+content: `<p><strong>الفقرة الأساسية:</strong> الشرك هو أن تجعل لله شريكاً في العبادة أو في صفاته أو في حكمه. وهو أعظم ذنب يمكن أن يرتكبه الإنسان، والوحيد الذي قال الله إنه لا يغفره إن مات صاحبه عليه.</p>
+<p><strong>الدليل:</strong> قال الله تعالى: ﴿إِنَّ اللَّهَ لَا يَغْفِرُ أَن يُشْرَكَ بِهِ وَيَغْفِرُ مَا دُونَ ذَٰلِكَ لِمَن يَشَاءُ﴾ [النساء: 48].</p>
+<p><strong>الشرح المختصر:</strong> الشرك نوعان: شرك أكبر — كدعاء غير الله، أو الذبح لغيره — ويُخرج من الإسلام. وشرك أصغر — كالرياء (أن تعمل الصالحات لأجل أن يراك الناس لا لأجل الله) — وهو خطير جداً لكنه لا يُخرج من الملة. تفادياً للشرك الأصغر: قبل أي عمل صالح، اسأل نفسك: لماذا أفعل هذا؟ هل هو لله أم لأجل ثناء الناس؟</p>
+<p><strong>النموذج التطبيقي:</strong> راجع اليوم نيتك في عمل واحد تفعله: صلاتك، أو مساعدتك لأحد، أو حفظك للقرآن. هل هو خالص لله؟ أم يخالطه شيء من الرياء؟ تُب إلى الله وأخلص نيتك.</p>
+<p><strong>الفائدة التربوية:</strong> معرفة خطورة الشرك تجعلك حذراً من الرياء وحب المدح — فتعمل لله في السر كما تعمل في العلن، وهذا هو أعلى درجات الإخلاص.</p>`
+},
+{
+title: "الدرس الحادي عشر: البدعة وخطرها",
+content: `<p><strong>الفقرة الأساسية:</strong> البدعة هي إحداث شيء في الدين لم يأذن به الله ولم يفعله النبي ﷺ ولا صحابته، بقصد التقرب إلى الله. والنبي ﷺ حذّر منها تحذيراً شديداً.</p>
+<p><strong>الدليل:</strong> قال النبي ﷺ: «مَنْ أَحْدَثَ فِي أَمْرِنَا هَذَا مَا لَيْسَ مِنْهُ فَهُوَ رَدٌّ» (رواه البخاري، رقم 2697، ومسلم، رقم 1718). أي: مردود غير مقبول.</p>
+<p><strong>الشرح المختصر:</strong> لا يعني هذا أن أي جديد في الحياة حرام — فاستخدام الميكروفون في الأذان أو الطباعة للمصاحف ليست بدعة. البدعة المحرمة هي ما يتعلق بالعبادات: كأن تخترع صلاةً جديدة، أو تحتفل بمناسبات دينية لم يثبت لها أصل. معيار البدعة: هل فعلها النبي ﷺ أو أقرّها؟ إن كان الجواب لا، فابتعد. والحماية الكاملة: الالتزام بالسنة الثابتة.</p>
+<p><strong>النموذج التطبيقي:</strong> سل نفسك عن عادة دينية تفعلها أسرتك: هل لها أصل في السنة؟ إن لم تعرف، اسأل عالماً ثقة ولا تحكم بجهل.</p>
+<p><strong>الفائدة التربوية:</strong> التمسك بالسنة يحميك من الضياع في زمن كثرت فيه الآراء والتفسيرات. عُد دائماً إلى القرآن والسنة الصحيحة — وهما ضمان النجاة.</p>`
+},
+{
+title: "الدرس الثاني عشر: الولاء والبراء",
+content: `<p><strong>الفقرة الأساسية:</strong> الولاء والبراء من أصول الإيمان. الولاء يعني محبة المؤمنين ونصرتهم. والبراء يعني عدم مودة أعداء الله الساعين لهدم الإسلام — لا أن تكره كل غير مسلم أو تُسيء إليه. والإسلام يأمر بالعدل والإحسان مع غير المسلمين المسالمين.</p>
+<p><strong>الدليل:</strong> قال الله تعالى: ﴿لَّا يَنْهَاكُمُ اللَّهُ عَنِ الَّذِينَ لَمْ يُقَاتِلُوكُمْ فِي الدِّينِ وَلَمْ يُخْرِجُوكُم مِّن دِيَارِكُمْ أَن تَبَرُّوهُمْ وَتُقْسِطُوا إِلَيْهِمْ ۚ إِنَّ اللَّهَ يُحِبُّ الْمُقْسِطِينَ﴾ [الممتحنة: 8].</p>
+<p><strong>الشرح المختصر:</strong> الولاء والبراء لا يعني الكراهية العمياء أو العنصرية. بل هو: أن تحب لدينك لا لعرقك أو قبيلتك، وألا تتخذ أعداء الإسلام أولياء مقربين تبوح لهم بأسرار المسلمين. أما جارك غير المسلم المسالم فحقه عليك: الإحسان، والعدل، والبشاشة في وجهه — وربما يكون هذا سبباً لهدايته.</p>
+<p><strong>النموذج التطبيقي:</strong> فكر في صداقاتك: هل توليت صداقة أضرّت بدينك وأبعدتك عن الله؟ وهل أقمت علاقة عادلة مع غير المسلمين من حولك بدون إفراط ولا تفريط؟</p>
+<p><strong>الفائدة التربوية:</strong> الولاء الحقيقي للإيمان — لا للجنسية أو العرق أو اللغة — يبني أُمة متماسكة متعاطفة، ويجعلك قادراً على التعامل مع الجميع بعدل وكرامة.</p>`
+}
+]
+},
+// أضف هذا الكائن داخل مصفوفة rawCourses (بعد الدورات الموجودة)
+{
+  id: 2,
+  title: "آياتي: حفظ وتفسير وعمل",
+  icon: "fa-quran",
+  color: "#2980B9",
+  lessons: [
+    // الدرس الأول: الفاتحة
+    {
+      title: "سورة الفاتحة (أم الكتاب)",
+      content: `<p><strong>الفقرة الأساسية:</strong> ﴿بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ * الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ * الرَّحْمَنِ الرَّحِيمِ * مَالِكِ يَوْمِ الدِّينِ * إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ * اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ * صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّالِّينَ﴾ [الفاتحة: 1-7]</p>
+      <p><strong>الدليل:</strong> قال النبي ﷺ: «الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ هِيَ السَّبْعُ الْمَثَانِي وَالْقُرْآنُ الْعَظِيمُ الَّذِي أُوتِيتُهُ» (رواه البخاري، رقم 4474).</p>
+      <p><strong>الشرح المختصر:</strong> الفاتحة هي أعظم سورة في القرآن، نقرؤها 17 مرة على الأقل كل يوم في الصلاة. تبدأ بحمد الله، ثم تذكيرنا برحمته، ثم إعلان عبوديتنا له وحده: "إياك نعبد وإياك نستعين". ثم الدعاء الأعظم: "اهدنا الصراط المستقيم"، أي دلنا على طريق الحق.</p>
+      <p><strong>النموذج التطبيقي:</strong> جاء أعرابي إلى النبي ﷺ يشكو مرضاً، فعلّمه النبي أن يقرأ الفاتحة. فلما قرأها، شفي الرجل. فقال النبي ﷺ: «وَمَا يُدْرِيكَ أَنَّهَا رُقْيَةٌ؟» (رواه البخاري، رقم 5007). نعم، الفاتحة شفاء للقلب والبدن.</p>
+      <p><strong>الفائدة التربوية:</strong> عندما تقف في صلاتك وتقرأ الفاتحة، استشعر أنك تمدح الله، وتعلن له العبودية، ثم تطلب منه الهداية. لا تقرأها بسرعة، بل بتدبر. هذا يغير خشوعك تماماً.</p>`
+    },
+    // الدرس الثاني: آية الكرسي
+    {
+      title: "آية الكرسي (أعظم آية)",
+      content: `<p><strong>الفقرة الأساسية:</strong> ﴿اللَّهُ لَا إِلَهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ ۚ لَا تَأْخُذُهُ سِنَةٌ وَلَا نَوْمٌ ۚ لَهُ مَا فِي السَّمَاوَاتِ وَمَا فِي الْأَرْضِ ۗ مَنْ ذَا الَّذِي يَشْفَعُ عِنْدَهُ إِلَّا بِإِذْنِهِ ۚ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ ۖ وَلَا يُحِيطُونَ بِشَيْءٍ مِنْ عِلْمِهِ إِلَّا بِمَا شَاءَ ۚ وَسِعَ كُرْسِيُّهُ السَّمَاوَاتِ وَالْأَرْضَ ۖ وَلَا يَئُودُهُ حِفْظُهُمَا ۚ وَهُوَ الْعَلِيُّ الْعَظِيمُ﴾ [البقرة: 255]</p>
+      <p><strong>الدليل:</strong> قال النبي ﷺ: «مَنْ قَرَأَ آيَةَ الْكُرْسِيِّ فِي دُبُرِ كُلِّ صَلَاةٍ مَكْتُوبَةٍ، لَمْ يَمْنَعْهُ مِنْ دُخُولِ الْجَنَّةِ إِلَّا أَنْ يَمُوتَ» (رواه النسائي وصححه الألباني).</p>
+      <p><strong>الشرح المختصر:</strong> آية الكرسي أعظم آية في كتاب الله. فيها إثبات توحيد الله: هو الحي الذي لا يموت، القيوم الذي يقوم بتدبير كل شيء. لا ينام ولا يغفل، كل ما في الكون ملكه. كرسيه يسع السماوات والأرض.</p>
+      <p><strong>النموذج التطبيقي:</strong> كان أبو هريرة رضي الله عنه يحرس مال الصدقة، فجاء شيطان يسرق، فقال له: "إذا أويت إلى فراشك فاقرأ آية الكرسي، فإنك لن يزال عليك من الله حافظ". فلما أخبر النبي ﷺ قال: «أَمَا إِنَّهُ قَدْ صَدَقَكَ وَهُوَ كَذُوبٌ» (رواه البخاري، رقم 2311).</p>
+      <p><strong>الفائدة التربوية:</strong> اجعل لك عهداً: لا تترك آية الكرسي بعد كل صلاة أبداً. فهي حصنك من الشيطان، وسبب لدخول الجنة.</p>`
+    },
+    // الدرس الثالث: آمن الرسول
+    {
+      title: "آمن الرسول (خواتيم البقرة)",
+      content: `<p><strong>الفقرة الأساسية:</strong> ﴿آمَنَ الرَّسُولُ بِمَا أُنْزِلَ إِلَيْهِ مِنْ رَبِّهِ وَالْمُؤْمِنُونَ ۚ كُلٌّ آمَنَ بِاللَّهِ وَمَلَائِكَتِهِ وَكُتُبِهِ وَرُسُلِهِ لَا نُفَرِّقُ بَيْنَ أَحَدٍ مِنْ رُسُلِهِ ۚ وَقَالُوا سَمِعْنَا وَأَطَعْنَا ۖ غُفْرَانَكَ رَبَّنَا وَإِلَيْكَ الْمَصِيرُ * لَا يُكَلِّفُ اللَّهُ نَفْسًا إِلَّا وُسْعَهَا ۚ لَهَا مَا كَسَبَتْ وَعَلَيْهَا مَا اكْتَسَبَتْ ۗ رَبَّنَا لَا تُؤَاخِذْنَا إِنْ نَسِينَا أَوْ أَخْطَأْنَا ۚ رَبَّنَا وَلَا تَحْمِلْ عَلَيْنَا إِصْرًا كَمَا حَمَلْتَهُ عَلَى الَّذِينَ مِنْ قَبْلِنَا ۚ رَبَّنَا وَلَا تُحَمِّلْنَا مَا لَا طَاقَةَ لَنَا بِهِ ۖ وَاعْفُ عَنَّا وَاغْفِرْ لَنَا وَارْحَمْنَا ۚ أَنْتَ مَوْلَانَا فَانْصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ﴾ [البقرة: 285-286]</p>
+      <p><strong>الدليل:</strong> قال النبي ﷺ: «مَنْ قَرَأَ بِالْآيَتَيْنِ مِنْ آخِرِ سُورَةِ الْبَقَرَةِ فِي لَيْلَةٍ كَفَتَاهُ» (رواه البخاري، رقم 5009).</p>
+      <p><strong>الشرح المختصر:</strong> هاتان الآيتان فيهما إعلان إيمان الرسول والمؤمنين بكل ما أنزل الله، وفيهما دعوات عظيمة. وأعظم بشارة: "لا يكلف الله نفساً إلا وسعها"، أي أن الله لا يطلب منك فوق طاقتك أبداً.</p>
+      <p><strong>النموذج التطبيقي:</strong> لما أُسري بالنبي ﷺ، أعطاه الله خواتيم سورة البقرة، وقال: "هاتان الآيتان من كنوز الرحمة، لم يعطهن أحد قبلك". فهي هدية خاصة من الله لأمة محمد ﷺ.</p>
+      <p><strong>الفائدة التربوية:</strong> إذا شعرت بالحمل ثقيلاً أو الامتحان صعباً، تذكر: ﴿لَا يُكَلِّفُ اللَّهُ نَفْسًا إِلَّا وُسْعَهَا﴾. واقرأ هاتين الآيتين قبل نومك لتكون في حفظ الله.</p>`
+    },
+    // الدرس الرابع: الإخلاص
+    {
+      title: "سورة الإخلاص (قل هو الله أحد)",
+      content: `<p><strong>الفقرة الأساسية:</strong> ﴿قُلْ هُوَ اللَّهُ أَحَدٌ * اللَّهُ الصَّمَدُ * لَمْ يَلِدْ وَلَمْ يُولَدْ * وَلَمْ يَكُنْ لَهُ كُفُوًا أَحَدٌ﴾ [الإخلاص: 1-4]</p>
+      <p><strong>الدليل:</strong> قال النبي ﷺ: «قُلْ هُوَ اللَّهُ أَحَدٌ تَعْدِلُ ثُلُثَ الْقُرْآنِ» (رواه البخاري، رقم 5015).</p>
+      <p><strong>الشرح المختصر:</strong> هذه السورة هي جوهر العقيدة: الله واحد، ليس له شريك ولا ولد. وهو الصمد: أي السيد الذي تصمد إليه الخلائق في كل حوائجها. ليس كمثله شيء.</p>
+      <p><strong>النموذج التطبيقي:</strong> كان رجل من الصحابة يحب هذه السورة، فكان يقرؤها في كل ركعة. فقال له النبي ﷺ: «حُبُّكَ إِيَّاهَا أَدْخَلَكَ الْجَنَّةَ» (رواه البخاري، رقم 774). حب سورة الإخلاص سبب لدخول الجنة.</p>
+      <p><strong>الفائدة التربوية:</strong> اقرأ سورة الإخلاص في أذكار الصباح والمساء (3 مرات)، وكأنك تقرأ القرآن كاملاً ثلاث مرات! ما أعظم هذا الفضل.</p>`
+    },
+    // الدرس الخامس: المعوذتان
+    {
+      title: "سورتا الفلق والناس (المعوذتان)",
+      content: `<p><strong>الفقرة الأساسية:</strong> ﴿قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ * مِنْ شَرِّ مَا خَلَقَ * وَمِنْ شَرِّ غَاسِقٍ إِذَا وَقَبَ * وَمِنْ شَرِّ النَّفَّاثَاتِ فِي الْعُقَدِ * وَمِنْ شَرِّ حَاسِدٍ إِذَا حَسَدَ﴾ [الفلق: 1-5]، ﴿قُلْ أَعُوذُ بِرَبِّ النَّاسِ * مَلِكِ النَّاسِ * إِلَهِ النَّاسِ * مِنْ شَرِّ الْوَسْوَاسِ الْخَنَّاسِ * الَّذِي يُوَسْوِسُ فِي صُدُورِ النَّاسِ * مِنَ الْجِنَّةِ وَالنَّاسِ﴾ [الناس: 1-6]</p>
+      <p><strong>الدليل:</strong> قال النبي ﷺ: «أُنْزِلَتْ عَلَيَّ آيَاتٌ لَمْ يُرَ مِثْلُهُنَّ قَطُّ: الْمُعَوِّذَتَانِ» (رواه مسلم، رقم 814).</p>
+      <p><strong>الشرح المختصر:</strong> هاتان السورتان هما حصنك من كل شر: شر المخلوقات، وشر الليل، وشر السحر، وشر الحسد، وشر وسوسة الشيطان الذي يوسوس في الصدور ثم يخنس (يختفي) عندما تذكر الله.</p>
+      <p><strong>النموذج التطبيقي:</strong> لما سحر اليهود النبي ﷺ، نزل جبريل بالمعوذتين، فقرأهما النبي، فقام كأنما نشط من عقال. وهكذا، المعوذات علاج لكل هم ومرض وحسد.</p>
+      <p><strong>الفائدة التربوية:</strong> اقرأ المعوذتين (الإخلاص + الفلق + الناس) ثلاث مرات كل صباح ومساء، وانفث في كفيك وامسح بهما جسدك. هذا حصن عظيم علمه لنا النبي ﷺ.</p>`
+    },
+    // الدرس السادس: الملك
+    {
+      title: "سورة الملك (تبارك)",
+      content: `<p><strong>الفقرة الأساسية:</strong> ﴿تَبَارَكَ الَّذِي بِيَدِهِ الْمُلْكُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ * الَّذِي خَلَقَ الْمَوْتَ وَالْحَيَاةَ لِيَبْلُوَكُمْ أَيُّكُمْ أَحْسَنُ عَمَلًا ۚ وَهُوَ الْعَزِيزُ الْغَفُورُ﴾ [الملك: 1-2] (والسورة كاملة 30 آية).</p>
+      <p><strong>الدليل:</strong> قال النبي ﷺ: «سُورَةٌ مِنَ الْقُرْآنِ ثَلَاثُونَ آيَةً شَفَعَتْ لِرَجُلٍ حَتَّى غُفِرَ لَهُ، وَهِيَ: تَبَارَكَ الَّذِي بِيَدِهِ الْمُلْكُ» (رواه الترمذي، رقم 2891، وصححه الألباني).</p>
+      <p><strong>الشرح المختصر:</strong> سورة الملك تتحدث عن قدرة الله في خلقه، وتذكرنا بالموت والحياة، وتحذر من النار. من قرأها كل ليلة، تشفع له عند الله يوم القيامة، وتنجيه من عذاب القبر.</p>
+      <p><strong>النموذج التطبيقي:</strong> كان أحد السلف لا ينام إلا ويقرأ سورة الملك. فلما مات، رآه صديقه في المنام وهو يضحك، فقال: "ما فعل الله بك؟" قال: "غفر لي بشفاعة سورة الملك". فكن من أهلها.</p>
+      <p><strong>الفائدة التربوية:</strong> اجعل لك ورداً: لا تنم حتى تقرأ سورة الملك. وردد الآية: ﴿الَّذِي خَلَقَ الْمَوْتَ وَالْحَيَاةَ لِيَبْلُوَكُمْ أَيُّكُمْ أَحْسَنُ عَمَلًا﴾ وتأمل: لماذا خلقت؟ ليعمل كل منا أحسن العمل.</p>`
+    },
+    // الدرس السابع: الكهف
+    {
+      title: "سورة الكهف (العصمة من الدجال)",
+      content: `<p><strong>الفقرة الأساسية:</strong> ﴿الْحَمْدُ لِلَّهِ الَّذِي أَنزَلَ عَلَىٰ عَبْدِهِ الْكِتَابَ وَلَمْ يَجْعَل لَّهُ عِوَجًا * قَيِّمًا لِّيُنذِرَ بَأْسًا شَدِيدًا مِّن لَّدُنْهُ...﴾ [الكهف: 1-10] (أول 10 آيات).</p>
+      <p><strong>الدليل:</strong> قال النبي ﷺ: «مَنْ حَفِظَ عَشْرَ آيَاتٍ مِنْ أَوَّلِ سُورَةِ الْكَهْفِ عُصِمَ مِنَ الدَّجَّالِ» (رواه مسلم، رقم 809).</p>
+      <p><strong>الشرح المختصر:</strong> المسيح الدجال فتنة عظيمة في آخر الزمان، يظهر ويدّعي أنه إله. من حفظ أول 10 آيات من سورة الكهف، عصمه الله من فتنته. السورة تذكرنا بقصة الفتية الذين ثبتوا على إيمانهم.</p>
+      <p><strong>النموذج التطبيقي:</strong> في زمن النبي ﷺ، سأل المشركون اليهودَ عن أسئلة ليختبروا بها النبي ﷺ. قالوا: اسألوه عن فتية ذهبوا في الزمان الأول، وعن رجل بلغ مشارق الأرض ومغاربها، وعن الروح. فنزلت سورة الكهف بالإجابة الكاملة!</p>
+      <p><strong>الفائدة التربوية:</strong> احفظ أول 10 آيات من سورة الكهف، واقرأها كل يوم جمعة. فهي نور لك بين الجمعتين، وحصن لك من الفتن.</p>`
+    },
+    // الدرس الثامن: العصر
+    {
+      title: "سورة العصر (دستور النجاة)",
+      content: `<p><strong>الفقرة الأساسية:</strong> ﴿وَالْعَصْرِ * إِنَّ الْإِنسَانَ لَفِي خُسْرٍ * إِلَّا الَّذِينَ آمَنُوا وَعَمِلُوا الصَّالِحَاتِ وَتَوَاصَوْا بِالْحَقِّ وَتَوَاصَوْا بِالصَّبْرِ﴾ [العصر: 1-3]</p>
+      <p><strong>الدليل:</strong> قال الشافعي رحمه الله: "لو ما أنزل الله حجة على خلقه إلا هذه السورة لكفتهم". رغم قصرها، فهي تضع منهج حياة كامل.</p>
+      <p><strong>الشرح المختصر:</strong> الله يقسم بالعمر (العصر) أن كل إنسان في خسارة وهلاك، إلا من جمع أربع صفات: 1) الإيمان، 2) العمل الصالح، 3) التواصي بالحق، 4) التواصي بالصبر. هذه وصفة النجاة الوحيدة.</p>
+      <p><strong>النموذج التطبيقي:</strong> كان صحابيان إذا التقيا لم يفترقا حتى يقرأ أحدهما على الآخر سورة العصر، ثم يسلم أحدهما على الآخر. كأنهم كانوا يتذكرون دائماً أن الوقت يمر، فلا بد من الإيمان والعمل.</p>
+      <p><strong>الفائدة التربوية:</strong> ضع هذه السورة نصب عينيك. كلما شعرت أنك تضيع وقتك، تذكر: الوقت يمضي (والعصر)، وأنت في خسارة إن لم تؤمن وتعمل صالحاً وتنصح غيرك وتصبر.</p>`
+    },
+    // الدرس التاسع: الضحى
+    {
+      title: "سورة الضحى (المواساة الإلهية)",
+      content: `<p><strong>الفقرة الأساسية:</strong> ﴿وَالضُّحَىٰ * وَاللَّيْلِ إِذَا سَجَىٰ * مَا وَدَّعَكَ رَبُّكَ وَمَا قَلَىٰ * وَلَلْآخِرَةُ خَيْرٌ لَّكَ مِنَ الْأُولَىٰ * وَلَسَوْفَ يُعْطِيكَ رَبُّكَ فَتَرْضَىٰ * أَلَمْ يَجِدْكَ يَتِيمًا فَآوَىٰ * وَوَجَدَكَ ضَالًّا فَهَدَىٰ * وَوَجَدَكَ عَائِلًا فَأَغْنَىٰ * فَأَمَّا الْيَتِيمَ فَلَا تَقْهَرْ * وَأَمَّا السَّائِلَ فَلَا تَنْهَرْ * وَأَمَّا بِنِعْمَةِ رَبِّكَ فَحَدِّثْ﴾ [الضحى: 1-11]</p>
+      <p><strong>الدليل:</strong> نزلت هذه السورة على النبي ﷺ بعد فترة من انقطاع الوحي، فقال المشركون: "إن رب محمد ودّعه وقلاه". فنزلت السورة مواساة له وتطميناً.</p>
+      <p><strong>الشرح المختصر:</strong> الله يقسم بالضحى والليل ليؤكد لنبيه: ما تركك ربك وما أبغضك. الآخرة خير لك من الدنيا، وسيعطيك حتى ترضى. ثم يذكره بنعمه السابقة: كنت يتيماً فآواك، وضالاً فهداك، وفقيراً فأغناك.</p>
+      <p><strong>النموذج التطبيقي:</strong> كان النبي ﷺ حزيناً جداً لانقطاع الوحي. فجاءته هذه السورة كالماء البارد على القلب الحزين. فتبسم النبي ﷺ. إذا حزنت، فاعلم أن الله سيرسل لك "سورة ضحى" خاصة بك.</p>
+      <p><strong>الفائدة التربوية:</strong> إذا شعرت يوماً أن الله بعيد، أو أن الأمور معقدة، فاقرأ سورة الضحى. الله لم ينساك. هو معك كما كان مع نبيه. وتذكر نعمه عليك.</p>`
+    },
+    // الدرس العاشر: القدر
+    {
+      title: "سورة القدر (فضلها العظيم)",
+      content: `<p><strong>الفقرة الأساسية:</strong> ﴿إِنَّا أَنزَلْنَاهُ فِي لَيْلَةِ الْقَدْرِ * وَمَا أَدْرَاكَ مَا لَيْلَةُ الْقَدْرِ * لَيْلَةُ الْقَدْرِ خَيْرٌ مِّنْ أَلْفِ شَهْرٍ * تَنَزَّلُ الْمَلَائِكَةُ وَالرُّوحُ فِيهَا بِإِذْنِ رَبِّهِم مِّن كُلِّ أَمْرٍ * سَلَامٌ هِيَ حَتَّىٰ مَطْلَعِ الْفَجْرِ﴾ [القدر: 1-5]</p>
+      <p><strong>الدليل:</strong> قال النبي ﷺ: «مَنْ قَامَ لَيْلَةَ الْقَدْرِ إِيمَانًا وَاحْتِسَابًا غُفِرَ لَهُ مَا تَقَدَّمَ مِنْ ذَنْبِهِ» (رواه البخاري، رقم 1901، ومسلم، رقم 760).</p>
+      <p><strong>الشرح المختصر:</strong> ليلة القدر هي الليلة التي أنزل فيها القرآن. عبادتها خير من عبادة 83 سنة كاملة! الملائكة وجبريل ينزلون فيها، وتسود السلامة والطمأنينة حتى طلوع الفجر.</p>
+      <p><strong>النموذج التطبيقي:</strong> في العشر الأواخر، كان النبي ﷺ يشد مئزره، ويعتزل نساءه، ويحيي الليل كله بالعبادة. إنها فرصة العمر. فلا تضيعها.</p>
+      <p><strong>الفائدة التربوية:</strong> استعد لليالي العشر الأواخر من رمضان. تحرَّ ليلة القدر في الليالي الوترية. أكثر من الدعاء: "اللهم إنك عفو تحب العفو فاعف عني".</p>`
+    },
+    // الدرس الحادي عشر: لقمان
+    {
+      title: "وصايا لقمان لابنه",
+      content: `<p><strong>الفقرة الأساسية:</strong> ﴿وَإِذْ قَالَ لُقْمَانُ لِابْنِهِ وَهُوَ يَعِظُهُ يَا بُنَيَّ لَا تُشْرِكْ بِاللَّهِ... يَا بُنَيَّ أَقِمِ الصَّلَاةَ... وَلَا تُصَعِّرْ خَدَّكَ لِلنَّاسِ... وَاقْصِدْ فِي مَشْيِكَ وَاغْضُضْ مِن صَوْتِكَ...﴾ [لقمان: 13-19]</p>
+      <p><strong>الدليل:</strong> هذه الوصايا هي منهج تربوي متكامل، سجله الله في كتابه لتكون دستور حياة.</p>
+      <p><strong>الشرح المختصر:</strong> 1) التوحيد: لا تشرك بالله. 2) بر الوالدين. 3) مراقبة الله. 4) إقامة الصلاة. 5) الأمر بالمعروف. 6) الصبر. 7) التواضع ولين الجانب. 8) خفض الصوت وآداب الكلام.</p>
+      <p><strong>النموذج التطبيقي:</strong> لقمان الحكيم كان عبداً أسوداً حبشياً، لكن الله آتاه الحكمة. عندما سئل عن سر حكمته، قال: "صدق الحديث، وأداء الأمانة، وترك ما لا يعنيني". هذه هي أخلاق القرآن التي نتعلمها.</p>
+      <p><strong>الفائدة التربوية:</strong> اجعل هذه الوصايا العشر برنامجك العملي اليوم. ابدأ بالتوحيد، وصلِّ بخشوع، وتعامل مع الناس بتواضع.</p>`
+    },
+    // الدرس الثاني عشر: الزلزلة
+    {
+      title: "سورة الزلزلة (مشهد يوم القيامة)",
+      content: `<p><strong>الفقرة الأساسية:</strong> ﴿إِذَا زُلْزِلَتِ الْأَرْضُ زِلْزَالَهَا * وَأَخْرَجَتِ الْأَرْضُ أَثْقَالَهَا * وَقَالَ الْإِنسَانُ مَا لَهَا * يَوْمَئِذٍ تُحَدِّثُ أَخْبَارَهَا * بِأَنَّ رَبَّكَ أَوْحَىٰ لَهَا * يَوْمَئِذٍ يَصْدُرُ النَّاسُ أَشْتَاتًا لِّيُرَوْا أَعْمَالَهُمْ * فَمَن يَعْمَلْ مِثْقَالَ ذَرَّةٍ خَيْرًا يَرَهُ * وَمَن يَعْمَلْ مِثْقَالَ ذَرَّةٍ شَرًّا يَرَهُ﴾ [الزلزلة: 1-8]</p>
+      <p><strong>الدليل:</strong> كان النبي ﷺ يكثر من قراءة هذه السورة، ويبين عظم معانيها.</p>
+      <p><strong>الشرح المختصر:</strong> تصور يوم القيامة: الأرض ترتجف وتهتز، وتخرج كل ما في باطنها من موتى وكنوز. الناس في حيرة ودهشة. والأرض تشهد على كل ما فعله الإنسان. ثم الحساب الدقيق: حتى الذرة من الخير تراها، والذرة من الشر تراها.</p>
+      <p><strong>النموذج التطبيقي:</strong> جاء رجل إلى النبي ﷺ بتمرتين فقيرتين. فقال النبي: "لا تحقروا من المعروف شيئاً، ولو أن تلقى أخاك بوجه طلق". هذه هي الذرة التي ستراها يوم القيامة.</p>
+      <p><strong>الفائدة التربوية:</strong> عندما تهم بفعل معصية، تذكر: ﴿فَمَن يَعْمَلْ مِثْقَالَ ذَرَّةٍ شَرًّا يَرَهُ﴾. لا تستهن بشيء. وعندما تفعل خيراً ولو صغيراً، تذكر أنك ستراه أمامك.</p>`
+    },
+    // الدرس الثالث عشر: الكافرون
+    {
+      title: "سورة الكافرون (إعلان التوحيد)",
+      content: `<p><strong>الفقرة الأساسية:</strong> ﴿قُلْ يَا أَيُّهَا الْكَافِرُونَ * لَا أَعْبُدُ مَا تَعْبُدُونَ * وَلَا أَنتُمْ عَابِدُونَ مَا أَعْبُدُ * وَلَا أَنَا عَابِدٌ مَّا عَبَدتُّمْ * وَلَا أَنتُمْ عَابِدُونَ مَا أَعْبُدُ * لَكُمْ دِينُكُمْ وَلِيَ دِينِ﴾ [الكافرون: 1-6]</p>
+      <p><strong>الدليل:</strong> قال النبي ﷺ: «قُلْ يَا أَيُّهَا الْكَافِرُونَ تَعْدِلُ رُبُعَ الْقُرْآنِ» (رواه الترمذي، رقم 2894، وحسنه الألباني).</p>
+      <p><strong>الشرح المختصر:</strong> هذه السورة إعلان واضح: لا مساومة في التوحيد. أنا أعبد الله وحده، وأنتم تعبدون آلهتكم. لا يمكن أن نلتقي في منتصف الطريق. في النهاية: لكم دينكم الباطل، ولي دين الإسلام الحق.</p>
+      <p><strong>النموذج التطبيقي:</strong> جاء كفار قريش إلى النبي ﷺ بعرض غريب: "نعبد إلهك سنة، وتعبد آلهتنا سنة!" فرفض النبي ﷺ. فنزلت سورة الكافرون قاطعة كل مفاوضات. التوحيد خط أحمر لا يمكن تجاوزه.</p>
+      <p><strong>الفائدة التربوية:</strong> اقرأ هذه السورة في ركعتي سنة الفجر، فهي سنة عن النبي ﷺ. واعلم أن التوحيد لا يقبل القسمة، وأنه خط أحمر لا يمكن المساومة عليه.</p>`
+    }
+  ]
+},
+// أضف هذا الكائن داخل مصفوفة rawCourses (بعد الدورات الموجودة)
+{
+  id: 3,
+  title: "النور المبين (الفقه والأحكام)",
+  icon: "fa-mosque",
+  color: "#1ABC9C",
+  lessons: [
+    // الدرس 1
+    {
+      title: "الماء والطهارة",
+      content: `<p><strong>الفقرة الأساسية:</strong> الطهارة شرط لصحة الصلاة، وهي واجبة. الأصل في الماء أنه طَهور (طاهر في نفسه ومطهّر لغيره) ما دام لم يتغير لونه أو طعمه أو ريحه بشيء نجس. ويجوز الوضوء بماء البحر والأنهار والآبار.</p>
+      <p><strong>الدليل:</strong> قال النبي ﷺ في البحر: «هُوَ الطَّهُورُ مَاؤُهُ، الْحِلُّ مَيْتَتُهُ» (رواه أبو داود والترمذي والنسائي، وصححه الألباني).</p>
+      <p><strong>الشرح المختصر:</strong> الماء الذي نتوضأ به هو الماء المطلق، أي على أصل خلقته، كماء المطر وماء الصنبور وماء النهر. إذا اختلط الماء بشيء طاهر كالصابون أو الشاي فأصبح ماءً ممزوجاً تغير اسمه، فلا يصح التطهر به. المهم أن يبقى الماء ماءً نقيًا.</p>
+      <p><strong>القصة الهادفة:</strong> كان الصحابة في سفر بعيد، وأصاب أحدهم جرح في رأسه، ثم احتلم في ليلة باردة. فسأل أصحابه عن التيمم، فقالوا: ما نراك إلا قد وجدت الماء. فاغتسل الرجل، فانتقض جرحه ومات. فلما بلغ النبي ﷺ قال: «قَتَلُوهُ قَتَلَهُمُ اللَّهُ! أَلَا سَأَلُوا إِذْ لَمْ يَعْلَمُوا، فَإِنَّمَا شِفَاءُ الْعِيِّ السُّؤَالُ. إِنَّمَا كَانَ يَكْفِيهِ أَنْ يَتَيَمَّمَ» (رواه أبو داود). نتعلم أن الجهل في الدين يقتل صاحبه، وأن رحمة الله واسعة في رخصه.</p>
+      <p><strong>الفائدة التربوية:</strong> لا تجتهد في العبادة على حساب صحتك، اسأل أهل العلم عن حكم الله، فالله مع العبد السائل.</p>`
+    },
+    // الدرس 2
+    {
+      title: "فروض الوضوء العملي",
+      content: `<p><strong>الفقرة الأساسية:</strong> للوضوء فروض لا يصح إلا بها: 1- النية، 2- غسل الوجه (ومنه المضمضة والاستنشاق)، 3- غسل اليدين إلى المرفقين، 4- مسح الرأس كله (ومنه الأذنان)، 5- غسل الرجلين إلى الكعبين، 6- الترتيب، 7- الموالاة (ألا يجف العضو السابق قبل غسل التالي). ويستحب التسمية في أوله.</p>
+      <p><strong>الدليل:</strong> قال الله تعالى: ﴿يَا أَيُّهَا الَّذِينَ آمَنُوا إِذَا قُمْتُمْ إِلَى الصَّلَاةِ فَاغْسِلُوا وُجُوهَكُمْ وَأَيْدِيَكُمْ إِلَى الْمَرَافِقِ وَامْسَحُوا بِرُءُوسِكُمْ وَأَرْجُلَكُمْ إِلَى الْكَعْبَيْنِ﴾ [المائدة: 6].</p>
+      <p><strong>الشرح المختصر:</strong> تذكر دائماً الترتيب: نية في القلب، ثم "بسم الله"، ثم تغسل كفيك ثلاثاً، ثم تتمضمض وتستنشق ثلاثاً، ثم تغسل وجهك كله، ثم يديك إلى المرفقين، ثم تمسح رأسك كله مرة واحدة مع الأذنين، ثم تغسل رجليك إلى الكعبين. الوضوء عبادة عظيمة تكفر الخطايا.</p>
+      <p><strong>القصة الهادفة:</strong> دخل عثمان بن عفان رضي الله عنه على النبي ﷺ فوجده يتوضأ، فقال النبي ﷺ: «مَنْ تَوَضَّأَ نَحْوَ وُضُوئِي هَذَا، ثُمَّ صَلَّى رَكْعَتَيْنِ لاَ يُحَدِّثُ فِيهِمَا نَفْسَهُ، غُفِرَ لَهُ مَا تَقَدَّمَ مِنْ ذَنْبِهِ» (رواه البخاري ومسلم). انظر كيف أن متابعة النبي في تفاصيل الوضوء سبب لمغفرة الذنوب!</p>
+      <p><strong>الفائدة التربوية:</strong> اجعل وضوءك طويلاً بتدبر، ولا تتعجل فيه، فهو مكفر للذنوب وماحية للخطايا.</p>`
+    },
+    // الدرس 3
+    {
+      title: "نواقض الوضوء",
+      content: `<p><strong>الفقرة الأساسية:</strong> ينتقض الوضوء بأمور: 1- الخارج من السبيلين (بول، غائط، ريح)، 2- النوم العميق الذي يغيب فيه الوعي، 3- أكل لحم الإبل (على الصحيح)، 4- لمس المرأة بشهوة (على قول)، والراجح أن مجرد اللمس لا ينقض. والأصل أن اليقين لا يزول بالشك، فلو شككت هل أحدثت أم لا، فوضوؤك صحيح.</p>
+      <p><strong>الدليل:</strong> قال النبي ﷺ: «لاَ يَنْصَرِفْ حَتَّى يَسْمَعَ صَوْتًا أَوْ يَجِدَ رِيحًا» (رواه البخاري ومسلم).</p>
+      <p><strong>الشرح المختصر:</strong> قاعدة ذهبية في الفقه: "اليقين لا يزول بالشك". إذا كنت متوضئاً وتذكرت أنك توضأت بعد العصر، لكنك لا تدري هل خرج منك ريح أم لا، فأنت على طهارتك. الشيطان يحب أن يجعلك تشك في وضوئك، فاطعنه بقول: لا، أنا متوضئ.</p>
+      <p><strong>القصة الهادفة:</strong> جاء رجل إلى الإمام الحسن البصري يشكو الوسواس في الوضوء، فقال له: "يا هذا، إن الشيطان قد اتخذ منك لعبة. إذا توضأت فقل: أشهد أن لا إله إلا الله، وامض إلى صلاتك ولا تلتفت". فذهب الرجل وعمل بالنصيحة، فذهب عنه الوسواس.</p>
+      <p><strong>الفائدة التربوية:</strong> لا تطع الشيطان في وساوسه، وتذكر أن الله يحب العبد المتعبد بقلب سليم، لا المتعب نفسه بالشكوك.</p>`
+    },
+    // الدرس 4
+    {
+      title: "أهمية الصلاة ومكانتها",
+      content: `<p><strong>الفقرة الأساسية:</strong> الصلاة هي الركن الثاني من أركان الإسلام، وأول ما يحاسب عليه العبد يوم القيامة. هي عمود الدين، من أقامها أقام الدين، ومن هدمها هدم الدين. فرضت في السماء ليلة المعراج، وهي خمس صلوات في اليوم والليلة.</p>
+      <p><strong>الدليل:</strong> قال النبي ﷺ: «الْعَهْدُ الَّذِي بَيْنَنَا وَبَيْنَهُمُ الصَّلاَةُ، فَمَنْ تَرَكَهَا فَقَدْ كَفَرَ» (رواه الترمذي والنسائي وابن ماجه، وصححه الألباني).</p>
+      <p><strong>الشرح المختصر:</strong> الصلاة ليست مجرد حركات، بل هي لقاء بينك وبين الله خمس مرات يومياً. تخيل أن ملكاً من ملوك الدنيا يسمح لك بمقابلته خمس مرات، ألن تفرح؟ فكيف بملك الملوك؟! حافظ على الصلاة في أول وقتها، فهي الفارق بين المسلم والكافر.</p>
+      <p><strong>القصة الهادفة:</strong> لما كان النبي ﷺ في سكرات الموت، وكان يغمى عليه ويفيق، قال: «مروا أبا بكر فليصل بالناس». كان آخر ما أوصى به أمته الصلاة، حتى وهو في أشد حالات المرض. فكيف بنا ونحن في صحة وعافية نفرط فيها؟!</p>
+      <p><strong>الفائدة التربوية:</strong> اجعل الصلاة همك الأكبر، فهي التي تصلح لك سائر عملك، وهي النور الذي يضيء يومك.</p>`
+    },
+    // الدرس 5
+    {
+      title: "شروط الصلاة وأركانها",
+      content: `<p><strong>الفقرة الأساسية:</strong> شروط الصلاة (ما يجب قبلها): 1- الإسلام، 2- العقل، 3- التمييز، 4- دخول الوقت، 5- الطهارة من الحدث، 6- طهارة البدن والثوب والمكان، 7- ستر العورة، 8- استقبال القبلة، 9- النية. وأركان الصلاة (ما تبطل بتركه عمداً أو سهواً): القيام مع القدرة، تكبيرة الإحرام، قراءة الفاتحة، الركوع، الاعتدال، السجود على الأعضاء السبعة، الجلوس بين السجدتين، الطمأنينة، التشهد الأخير، الجلوس له، التسليمتان، الترتيب.</p>
+      <p><strong>الدليل:</strong> لما علم النبي ﷺ المسيء صلاته قال له: «إِذَا قُمْتَ إِلَى الصَّلاَةِ فَأَسْبِغِ الْوُضُوءَ، ثُمَّ اسْتَقْبِلِ الْقِبْلَةَ فَكَبِّرْ، ثُمَّ اقْرَأْ مَا تَيَسَّرَ مَعَكَ مِنَ الْقُرْآنِ، ثُمَّ ارْكَعْ حَتَّى تَطْمَئِنَّ رَاكِعًا، ثُمَّ ارْفَعْ حَتَّى تَعْتَدِلَ قَائِمًا، ثُمَّ اسْجُدْ حَتَّى تَطْمَئِنَّ سَاجِدًا...» (رواه البخاري ومسلم).</p>
+      <p><strong>الشرح المختصر:</strong> الطمأنينة هي الركن الذي يخل به كثير من الناس. تعني أن تستقر في كل ركن مقدار تسبيحة. بعض الناس ينقر صلاته نقر الغراب، فلا تصح. تأكد أن ظهرك يكون معتدلاً في الركوع، وجبهتك وأنفك وكفيك وركبتيك وأطراف أصابع قدميك تمس الأرض في السجود.</p>
+      <p><strong>القصة الهادفة:</strong> رأى حذيفة بن اليمان رضي الله عنه رجلاً يصلي بسرعة، فقال له: "منذ كم تصلي هذه الصلاة؟" قال: "منذ أربعين سنة". قال حذيفة: "ما صليت منذ أربعين سنة! ولو مت على هذا مت على غير فطرة محمد ﷺ". إنه تحذير شديد يبين أهمية الإتقان.</p>
+      <p><strong>الفائدة التربوية:</strong> صلّ صلاة مودع، كأنها آخر صلاة في عمرك، فأتم ركوعها وسجودها بخشوع وطمأنينة.</p>`
+    },
+    // الدرس 6
+    {
+      title: "صفة صلاة النبي ﷺ (مختصرة)",
+      content: `<p><strong>الفقرة الأساسية:</strong> بعد تكبيرة الإحرام، ضع يدك اليمنى على اليسرى على صدرك. اقرأ دعاء الاستفتاح سراً، ثم استعذ بالله، ثم البسملة، ثم اقرأ الفاتحة، وقل بعدها "آمين". ثم اقرأ سورة قصيرة. ثم ارفع يديك وكبر للركوع، وقل "سبحان ربي العظيم" ثلاثاً. ثم ارفع قائلاً "سمع الله لمن حمده، ربنا ولك الحمد". ثم اسجد مكبراً وقل "سبحان ربي الأعلى" ثلاثاً. ثم اجلس مفترشاً بين السجدتين وادع: "رب اغفر لي". ثم اسجد الثانية. ثم قم للركعة الثانية، وهكذا. في التشهد الأخير، تقرأ التشهد والصلاة الإبراهيمية، ثم تدعو، ثم تسلم يميناً وشمالاً.</p>
+      <p><strong>الدليل:</strong> قال النبي ﷺ: «صَلُّوا كَمَا رَأَيْتُمُونِي أُصَلِّي» (رواه البخاري).</p>
+      <p><strong>الشرح المختصر:</strong> هذه هي الصلاة التي كان يفعلها النبي ﷺ ويأمرنا بها. تعلمها جيداً، واجعلها صلاتك اليومية. الأذكار التي تقولها في الركوع والسجود هي اتصال بالله، فلا تقلها بلسانك فقط، بل بقلبك.</p>
+      <p><strong>القصة الهادفة:</strong> صلى النبي ﷺ يوماً بالناس، فلما سلم، قام رجل متأخر ليقضي ما فاته، وكان يصلي بسرعة. فقال النبي لأصحابه: "ألا رجل يتصدق على هذا فيصلي معه؟" فقام رجل من الصحابة، فصلى معه ركعتين بتأنٍّ وطمأنينة، فعلمه الصلاة الصحيحة عملياً.</p>
+      <p><strong>الفائدة التربوية:</strong> العلم بالصفة العملية أهم من مجرد النظرية، فالقدوة العملية أبلغ أثراً في التعليم.</p>`
+    },
+    // الدرس 7
+    {
+      title: "صلاة الجماعة والمسجد",
+      content: `<p><strong>الفقرة الأساسية:</strong> صلاة الجماعة واجبة على الرجال القادرين. وهي تزيد على صلاة الفرد بسبع وعشرين درجة. ويجب على الشاب إذا سمع الأذان أن يجيب ويذهب إلى المسجد. وخير صفوف الرجال أولها، وخير صفوف النساء آخرها. وتصح الجماعة باثنين فصاعداً.</p>
+      <p><strong>الدليل:</strong> قال النبي ﷺ: «صَلاَةُ الْجَمَاعَةِ أَفْضَلُ مِنْ صَلاَةِ الْفَذِّ بِسَبْعٍ وَعِشْرِينَ دَرَجَةً» (رواه البخاري ومسلم).</p>
+      <p><strong>الشرح المختصر:</strong> لا تستهن بصلاة الجماعة. حين تمشي إلى المسجد، فخطواتك إحداها ترفع درجة والأخرى تحط خطيئة. في المسجد أنت مع الملائكة، تتعلم النظام، وتتعرف على إخوانك الصالحين. احرص على أن تكون في الصف الأول خلف الإمام مباشرة.</p>
+      <p><strong>القصة الهادفة:</strong> كان عبد الله بن أم مكتوم رضي الله عنه رجلاً أعمى، يسكن بعيداً عن المسجد. فقال للنبي ﷺ: "يا رسول الله، ليس لي قائد، فهل لي رخصة أن أصلي في بيتي؟" قال النبي: "هل تسمع الأذان؟" قال: "نعم". قال: «فَأَجِبْ». وفي رواية: «لا أجد لك رخصة». فإذا كان الأعمى ليس له رخصة، فكيف بالشاب القوي الصحيح؟!</p>
+      <p><strong>الفائدة التربوية:</strong> حافظ على صلاة الجماعة، فهي عنوان إيمانك، وسبب لمحبة الله لك.</p>`
+    },
+    // الدرس 8
+    {
+      title: "أحكام الصيام وآدابه",
+      content: `<p><strong>الفقرة الأساسية:</strong> صيام رمضان ركن من أركان الإسلام. تمسك عن الطعام والشراب وسائر المفطرات من طلوع الفجر الصادق إلى غروب الشمس، بنية التقرب إلى الله. يجب الصوم على المسلم البالغ العاقل القادر. ويستحب تعويد الصبيان عليه من سن السابعة تدريجياً. ويباح الفطر للمريض والمسافر، وعليهما القضاء.</p>
+      <p><strong>الدليل:</strong> قال الله تعالى: ﴿يَا أَيُّهَا الَّذِينَ آمَنُوا كُتِبَ عَلَيْكُمُ الصِّيَامُ كَمَا كُتِبَ عَلَى الَّذِينَ مِنْ قَبْلِكُمْ لَعَلَّكُمْ تَتَّقُونَ﴾ [البقرة: 183].</p>
+      <p><strong>الشرح المختصر:</strong> الصيام ليس جوعاً وعطشاً فقط، بل هو تربية للنفس. الهدف هو التقوى: أن تخاف الله في السر والعلن. من سنن الصيام: تعجيل الفطر على رطب أو تمر أو ماء، وتأخير السحور، والإكثار من تلاوة القرآن والصدقة، وقيام الليل.</p>
+      <p><strong>القصة الهادفة:</strong> دخل النبي ﷺ على امرأة من الأنصار في رمضان، فوجدها صائمة وقد اشتد بها العطش، فقدم لها طعاماً فأبت أن تفطر. فقال لها: "أفطري، إن الله تجاوز للمسافر والمرضع والحامل". فأفطرت. نتعلم أن رحمة الله فوق كل شيء، والرخص الشرعية نعمة يجب أن نقبلها.</p>
+      <p><strong>الفائدة التربوية:</strong> لا تتعسف على نفسك في العبادة، فالله يحب أن تؤتى رخصه كما يحب أن تؤتى عزائمه.</p>`
+    },
+    // الدرس 9
+    {
+      title: "مفهوم الزكاة والصدقة",
+      content: `<p><strong>الفقرة الأساسية:</strong> الزكاة فريضة على المسلم الذي يملك نصاباً ويحول عليه الحول. أما الصدقة فهي تطوع واسع، تشمل المال، والكلمة الطيبة، والابتسامة، وكل معروف. الصدقة تطفئ غضب الرب، وتدفع البلاء.</p>
+      <p><strong>الدليل:</strong> قال النبي ﷺ: «اتَّقُوا النَّارَ وَلَوْ بِشِقِّ تَمْرَةٍ» (رواه البخاري ومسلم).</p>
+      <p><strong>الشرح المختصر:</strong> وأنت في هذا العمر، قد لا يكون لديك مال كثير، لكن باب الصدقة واسع. قال النبي ﷺ: "تبسمك في وجه أخيك صدقة". ساعد والدتك، درّس أخاك، أزل الأذى عن الطريق، كلها صدقات تكتب في صحيفتك.</p>
+      <p><strong>القصة الهادفة:</strong> جاء رجل فقير إلى النبي ﷺ يشكو الجوع، فقال لأصحابه: "من يستضيف هذا؟" فقام رجل من الأنصار، وأخذه إلى بيته. ولم يكن عنده إلا طعام قليل لأولاده. فوضع الأطفال في الفراش، وأطفأ السراج، وجعل يمضغ اللقمة ويضعها في فم الضيف حتى شبع. فنزل فيه قول الله: ﴿وَيُؤْثِرُونَ عَلَى أَنْفُسِهِمْ وَلَوْ كَانَ بِهِمْ خَصَاصَةٌ﴾ [الحشر: 9].</p>
+      <p><strong>الفائدة التربوية:</strong> الإيثار أعلى مراتب الصدقة، وهو أن تقدم حاجة غيرك على حاجتك ولو كنت محتاجاً.</p>`
+    },
+    // الدرس 10
+    {
+      title: "الصدق والأمانة في البيع والشراء",
+      content: `<p><strong>الفقرة الأساسية:</strong> يجب على المسلم أن يكون صادقاً أميناً في كل معاملاته. البيع والشراء حلال إذا كان بتراضٍّ وصدق ووضوح. الغش والخداع محرم، ومن غش فليس من المسلمين.</p>
+      <p><strong>الدليل:</strong> قال النبي ﷺ: «مَنْ غَشَّنَا فَلَيْسَ مِنَّا» (رواه مسلم).</p>
+      <p><strong>الشرح المختصر:</strong> عندما تبيع قلماً، بيّن عيوبه إن وجدت. إذا وجدت شيئاً في الشارع، فهو أمانة، حاول إعادته لصاحبه. في دراستك، لا تغش في الامتحان، لأن الغش كبيرة، ومن غشنا فليس على خلق النبي ﷺ.</p>
+      <p><strong>القصة الهادفة:</strong> مر النبي ﷺ في السوق على بائع حبوب، فأعجبه شكل القمح من الخارج، فأدخل يده في الكومة، فإذا بالقمح مبتل من الداخل! فقال: "ما هذا؟" قال الرجل: "أصابته السماء". فقال النبي: «أَفَلاَ جَعَلْتَهُ فَوْقَ الطَّعَامِ حَتَّى يَرَاهُ النَّاسُ؟ مَنْ غَشَّ فَلَيْسَ مِنِّي».</p>
+      <p><strong>الفائدة التربوية:</strong> الصدق في البيع يبارك الله في الرزق، والغش يمحق البركة ويجلب السخط.</p>`
+    },
+    // الدرس 11
+    {
+      title: "آداب الطعام والشراب",
+      content: `<p><strong>الفقرة الأساسية:</strong> من آداب الطعام: التسمية في أوله، والحمد في آخره، والأكل باليمين، والأكل مما يليك، وعدم عيب الطعام. ويستحب الاجتماع على الطعام، وتناول اللقمة الصغيرة، ومضغها جيداً، وعدم النفخ في الشراب.</p>
+      <p><strong>الدليل:</strong> قال النبي ﷺ لعمرو بن أبي سلمة: «يَا غُلاَمُ، سَمِّ اللَّهَ، وَكُلْ بِيَمِينِكَ، وَكُلْ مِمَّا يَلِيكَ» (رواه البخاري ومسلم).</p>
+      <p><strong>الشرح المختصر:</strong> تخيل أنك تجلس مع النبي ﷺ وتأكل معه. لا تمد يدك إلى الطرف الآخر من الصحن، ولا تنتقد الطعام إن كان لا يعجبك، بل اتركه بأدب. الأكل باليد اليسرى من تشبه الشيطان، فاحذر. ولا تبدأ بالطعام قبل والديك إكراماً لهما.</p>
+      <p><strong>القصة الهادفة:</strong> دخل عمر بن أبي سلمة (غلام صغير) على النبي ﷺ، وكانت يده تطيش في الصفحة، يأكل من كل جانب. فأمسك النبي بيده بلطف، وربته على كتفه، وعلمه هذه الآداب. قال عمر: "فما زلت تلك طعمتي بعد". لاحظ التوجيه اللطيف الذي يعلق في الذهن طول العمر.</p>
+      <p><strong>الفائدة التربوية:</strong> التربية بالرفق واللمسة الحانية أثرها في النفس أعمق من الترهيب والوعيد.</p>`
+    },
+    // الدرس 12
+    {
+      title: "آداب النوم والاستئذان",
+      content: `<p><strong>الفقرة الأساسية:</strong> من آداب النوم: أن تنام على طهارة، وتنفض فراشك، وتقرأ أذكار النوم (المعوذات والإخلاص)، وتنام على شقك الأيمن. وأما الاستئذان: فلا تدخل بيتاً غير بيتك حتى تستأذن وتسلم، وإذا قيل لك ارجع فارجع. والاستئذان واجب على الغلام إذا بلغ الحلم، حتى على والديه في أوقات الراحة.</p>
+      <p><strong>الدليل:</strong> قال الله تعالى: ﴿يَا أَيُّهَا الَّذِينَ آمَنُوا لَا تَدْخُلُوا بُيُوتًا غَيْرَ بُيُوتِكُمْ حَتَّى تَسْتَأْنِسُوا وَتُسَلِّمُوا عَلَى أَهْلِهَا﴾ [النور: 27].</p>
+      <p><strong>الشرح المختصر:</strong> الاستئذان أدب قرآني عظيم. عندما تريد الدخول على والديك في وقت القيلولة، استأذن باحترام. قل: "السلام عليكم، أأدخل؟" والنوم على الشق الأيمن هو سنة نبوية، وهو الأصح للجسم.</p>
+      <p><strong>القصة الهادفة:</strong> كان عبد الله بن مسعود رضي الله عنه من ألزم الناس للنبي ﷺ. قال: "كنت لا أستأذن على النبي ﷺ في وقت القيلولة إلا ألقيت حجراً صغيراً على الباب، فإن سمعت صوت النبي تحركت، وإلا رجعت". انظر إلى الأدب الرفيع مع رسول الله، وهذا يعلمنا احترام خصوصية الآخرين.</p>
+      <p><strong>الفائدة التربوية:</strong> الاستئذان يعلمك احترام حرمة البيوت وأوقات الراحة، وهو من مكارم الأخلاق.</p>`
+    },
+    // الدرس 13
+    {
+      title: "بر الوالدين",
+      content: `<p><strong>الفقرة الأساسية:</strong> بر الوالدين واجب، وهو من أعظم القربات بعد التوحيد. البر يكون بالطاعة في المعروف، والخدمة، والكلام اللين، والنفقة إذا احتاجا، وعدم التأفف منهما. وعقوقهما من أكبر الكبائر، ويحرم دخول الجنة على العاق لوالديه.</p>
+      <p><strong>الدليل:</strong> قال الله تعالى: ﴿وَقَضَىٰ رَبُّكَ أَلَّا تَعْبُدُوا إِلَّا إِيَّاهُ وَبِالْوَالِدَيْنِ إِحْسَانًا... فَلَا تَقُلْ لَهُمَا أُفٍّ وَلَا تَنْهَرْهُمَا وَقُلْ لَهُمَا قَوْلًا كَرِيمًا﴾ [الإسراء: 23].</p>
+      <p><strong>الشرح المختصر:</strong> "أف" كلمة صغيرة، لكنها ذكرت في القرآن للتحذير. فكيف بالصراخ أو الإهانة؟ بر الوالدين ليس مجرد طاعة، بل هو شكر ورحمة. إذا طلب منك والدك كوب ماء، فابتسم وأسرع. وإذا نادتك أمك فقل: "نعم يا أمي"، لا تقل: "نعم" فقط. هذه التفاصيل هي البر الحقيقي.</p>
+      <p><strong>القصة الهادفة:</strong> جاء رجل إلى النبي ﷺ وقال: "يا رسول الله، إن أمي أصابها المرض وهي عندي، وأنا أطعمها بيدي، وأحملها، وأغسلها. فهل أديت شكرها؟" قال: «لا، ولا بزفرة واحدة من زفرات الولادة». لقد ضرب النبي مثلاً بآلام الولادة، ليبين أن فضل الأم لا يمكن أن يكافأ.</p>
+      <p><strong>الفائدة التربوية:</strong> مهما فعلت مع والديك، فأنت مقصر أمام فضلهما، فاجتهد في برهما وارضهما قبل أن يموتا.</p>`
+    },
+    // الدرس 14
+    {
+      title: "حفظ اللسان واجتناب الغيبة",
+      content: `<p><strong>الفقرة الأساسية:</strong> اللسان نعمة خطيرة. يجب حفظه من الكذب، والغيبة (ذكر أخاك بما يكره في غيبته)، والنميمة (نقل الكلام بين الناس للإفساد)، والفحش، وشهادة الزور. الصمت خير من كلام في غير منفعة.</p>
+      <p><strong>الدليل:</strong> قال النبي ﷺ: «مَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الْآخِرِ، فَلْيَقُلْ خَيْرًا أَوْ لِيَصْمُتْ» (رواه البخاري ومسلم).</p>
+      <p><strong>الشرح المختصر:</strong> قبل أن تتكلم، اسأل نفسك: هل هذا الكلام طيب؟ هل هو ضروري؟ هل يرضي الله؟ إن لم يكن خيراً، فابتلع الكلمة. الغيبة أن تقول عن صديقك: إنه قصير، أو بطيء. النميمة تدمر الصداقات، وهي من أسباب عذاب القبر.</p>
+      <p><strong>القصة الهادفة:</strong> مر النبي ﷺ بقبرين، فقال: «إِنَّهُمَا لَيُعَذَّبَانِ، وَمَا يُعَذَّبَانِ فِي كَبِيرٍ: أَمَّا أَحَدُهُمَا فَكَانَ لاَ يَسْتَبْرِئُ مِنَ الْبَوْلِ، وَأَمَّا الْآخَرُ فَكَانَ يَمْشِي بِالنَّمِيمَةِ» (رواه البخاري ومسلم). انظر كيف جعل النبي النميمة سبباً لعذاب القبر، مع أن الناس قد يرونها أمراً بسيطاً.</p>
+      <p><strong>الفائدة التربوية:</strong> احفظ لسانك مما لا يعنيك، وتذكر أن كل كلمة تكتب عليك، فلا تكن سبباً في هلاكك بكلمة.</p>`
+    },
+    // الدرس 15
+    {
+      title: "الأمر بالمعروف والنهي عن المنكر",
+      content: `<p><strong>الفقرة الأساسية:</strong> كل مسلم عليه واجب تجاه المجتمع: أن يأمر بالمعروف وينهى عن المنكر حسب استطاعته. إذا رأيت منكراً، غيره بيدك إن استطعت، فإن لم تستطع فبلسانك، فإن لم تستطع فبقلبك (وهو أضعف الإيمان). واعلم أن تغيير المنكر يحتاج إلى علم وحكمة ورفق.</p>
+      <p><strong>الدليل:</strong> قال النبي ﷺ: «مَنْ رَأَى مِنْكُمْ مُنْكَرًا فَلْيُغَيِّرْهُ بِيَدِهِ، فَإِنْ لَمْ يَسْتَطِعْ فَبِلِسَانِهِ، فَإِنْ لَمْ يَسْتَطِعْ فَبِقَلْبِهِ، وَذَلِكَ أَضْعَفُ الْإِيمَانِ» (رواه مسلم).</p>
+      <p><strong>الشرح المختصر:</strong> شاب مثلك يستطيع أن يغير الكثير. إذا رأيت زميلاً يغش، أنكر عليه بلطف. إذا سمعت كلمة بذيئة، قل: هذا لا يجوز. الإنكار بالقلب يعني أن تبغض المنكر وتعزم على تغييره لو استطعت. لا تكن سلبياً، فأنت صاحب رسالة.</p>
+      <p><strong>القصة الهادفة:</strong> في زمن بني إسرائيل، كانت قرية تعصي الله، وفيهم رجل ينكر، ورجل يسكت، ورجل ترك القرية. فأنجى الله الذي أنكر، وأهلك الساكتين والراحلين، لأن الساكت كان راضياً بقلبه عن المنكر، والراحل لم يقم بواجب التغيير. فكن أنت الذي ينكر ويصلح.</p>
+      <p><strong>الفائدة التربوية:</strong> لا تكن ساكناً على المنكر، فالسكوت عن الحق يوجب العقاب، والتغيير بالحكمة يوجب الأجر والثواب.</p>`
+    }
+  ]
+},
+// أضف هذا الكائن داخل مصفوفة rawCourses (بعد الدورات الموجودة)
+{
+  id: 4,
+  title: "مع الحبيب ﷺ (السيرة النبوية)",
+  icon: "fa-star-and-crescent",
+  color: "#8E44AD",
+  lessons: [
+    // الدرس 1
+    {
+      title: "نسبه الشريف ومولده المبارك",
+      content: `<p><strong>الفقرة الأساسية:</strong> هو محمد بن عبد الله بن عبد المطلب بن هاشم، من قبيلة قريش، من نسل إسماعيل بن إبراهيم عليهما السلام. ولد في مكة المكرمة، في عام الفيل (حوالي 571م)، يوم الإثنين، في شهر ربيع الأول. مات أبوه عبد الله قبل ولادته، وماتت أمه آمنة وعمره ست سنوات، فتولى جده عبد المطلب رعايته ثم مات، فكفله عمه أبو طالب.</p>
+      <p><strong>الدليل:</strong> قال النبي ﷺ: «إِنَّ اللَّهَ اصْطَفَى كِنَانَةَ مِنْ وَلَدِ إِسْمَاعِيلَ، وَاصْطَفَى قُرَيْشًا مِنْ كِنَانَةَ، وَاصْطَفَى مِنْ قُرَيْشٍ بَنِي هَاشِمٍ، وَاصْطَفَانِي مِنْ بَنِي هَاشِمٍ» (رواه مسلم، رقم 2276).</p>
+      <p><strong>الشرح المختصر:</strong> النبي ﷺ من أشرف بيت في أشرف قبيلة. وُلد يتيماً، قال الله له لاحقاً: ﴿أَلَمْ يَجِدْكَ يَتِيمًا فَآوَىٰ﴾ [الضحى: 6]. ولادته كانت حدثاً عظيماً، ففي تلك الليلة خرج نور أضاء قصور الشام. وُلد مختوناً نظيفاً، وتوفي والده وهو في بطن أمه، ليكون ربه هو الذي يربيه.</p>
+      <p><strong>النموذج التطبيقي (القصة الهادفة):</strong> لما ولد النبي ﷺ، أخبرت أمه أنها رأت نوراً خرج منها أضاءت له قصور الشام. وهذا يدل على أن مولده كان مباركاً، وأن الله قد أعدّه ليكون نوراً للعالمين. هل تعلم أن عام الفيل كان علامة على قوة الله وحماية بيته من أبرهة؟ لقد ولد النبي في خير عام، بعد أن رد الله كيد أعداء الكعبة.</p>
+      <p><strong>الفائدة التربوية:</strong> 1- قيمة النسب الطاهر، 2- اليتم لا يمنع العظمة (النبي تربى يتيماً ومع ذلك صار سيد العالمين)، 3- اصطفاء الله: الله يختار من يشاء لرسالته، فكن أهلاً للخير دائماً.</p>`
+    },
+    // الدرس 2
+    {
+      title: "طفولته ورعاية الله له",
+      content: `<p><strong>الفقرة الأساسية:</strong> أرضعته حليمة السعدية، وحدثتها البركات في بيتها منذ أن أخذته. وفي صغره، وهو عند حليمة، جاءه جبريل، فشق صدره، وأخرج قلبه الشريف، وغسله بماء زمزم، وأعاد قلبه أبيض نقياً، ثم أرجعه إلى مكانه. وفي شبابه، سافر إلى الشام في تجارة لخديجة، ورآه بحيرا الراهب فعرف فيه علامات النبوة. وكان قبل البعثة لا يسجد لصنم، ولا يشرب خمراً، وكان يختلي بغار حراء يتعبد.</p>
+      <p><strong>الدليل:</strong> قالت حليمة السعدية عن البركة في بيتها: "فوالله ما من شيء كان يمسه إلا وجدنا فيه البركة". وقال أنس بن مالك رضي الله عنه: «أَنَّ رَسُولَ اللَّهِ ﷺ أَتَاهُ جِبْرِيلُ وَهُوَ يَلْعَبُ مَعَ الْغِلْمَانِ، فَأَخَذَهُ فَصَرَعَهُ، فَشَقَّ عَنْ قَلْبِهِ، فَاسْتَخْرَجَ الْقَلْبَ، فَاسْتَخْرَجَ مِنْهُ عَلَقَةً، فَقَالَ: هَذَا حَظُّ الشَّيْطَانِ مِنْكَ...» (رواه مسلم، رقم 162).</p>
+      <p><strong>الشرح المختصر:</strong> الله تعالى حفظ نبيه من كل شيء يشينه منذ طفولته. حادثة شق الصدر حدثت مرتين، والغرض منها تطهيره وإعداده لحمل الرسالة. اختلاؤه بغار حراء قبل البعثة كان تربية إلهية له، حيث كان يتفكر في خلق السماوات والأرض بعيداً عن ضجيج مكة.</p>
+      <p><strong>النموذج التطبيقي (القصة الهادفة):</strong> في رحلة الشام، رأى الراهب بحيرا غمامة تظلل النبي، فلما قرب منه عرف فيه علامات النبوة وقال لأبي طالب: "ارجع بهذا الغلام، ولا تذهب به إلى الشام، فإن اليهود سيقتلونه". فكانت هذه أول بشارة لأهل مكة بقرب بعثته.</p>
+      <p><strong>الفائدة التربوية:</strong> 1- الابتعاد عن السوء في الصغر: كن كالنبي ﷺ مترفعاً عن الرذائل، 2- الخلوة بالنفس للمراجعة والتفكر، 3- البركة بالإيمان: الإيمان والصدق يجلبان البركة للحياة كلها.</p>`
+    },
+    // الدرس 3
+    {
+      title: "نزول الوحي وبداية الدعوة",
+      content: `<p><strong>الفقرة الأساسية:</strong> نزل جبريل عليه السلام على النبي ﷺ في غار حراء وهو في الأربعين من عمره، فقال له: «اقرأ»، قال: "ما أنا بقارئ"، وكررها ثلاثاً، حتى قال: ﴿اقْرَأْ بِاسْمِ رَبِّكَ الَّذِي خَلَقَ * خَلَقَ الْإِنْسَانَ مِنْ عَلَقٍ * اقْرَأْ وَرَبُّكَ الْأَكْرَمُ * الَّذِي عَلَّمَ بِالْقَلَمِ * عَلَّمَ الْإِنْسَانَ مَا لَمْ يَعْلَمْ﴾ [العلق: 1-5]. فعاد إلى خديجة يرتجف، وقال: "زملوني"، ثم قص عليها الخبر، فقالت كلمتها الشهيرة: "كلا والله لا يخزيك الله أبداً، إنك لتصل الرحم، وتحمل الكل، وتكسب المعدوم، وتقري الضيف، وتعين على نوائب الحق".</p>
+      <p><strong>الدليل:</strong> قالت عائشة رضي الله عنها: «أَوَّلُ مَا بُدِئَ بِهِ رَسُولُ اللَّهِ ﷺ مِنَ الْوَحْيِ الرُّؤْيَا الصَّالِحَةُ فِي النَّوْمِ...» (رواه البخاري، رقم 3، ومسلم، رقم 160).</p>
+      <p><strong>الشرح المختصر:</strong> "اقرأ" أول كلمة نزلت. إنها رسالة: أمة الإسلام هي أمة العلم والمعرفة. النبي ﷺ كان أُمّيّاً لا يقرأ ولا يكتب ليظهر إعجاز القرآن. رجع إلى خديجة خائفاً، لكنها ثبتته بذكائها وإيمانها. ذهبت به إلى ورقة بن نوفل، الذي بشره بالنبوة.</p>
+      <p><strong>النموذج التطبيقي (القصة الهادفة):</strong> خديجة رضي الله عنها لم تتردد لحظة في تصديقه، رغم أن الخبر كان ثقيلاً. وقالت له: "أبشر، فوالله لا يخزيك الله أبداً". لقد كانت عاقلة حكيمة، تعرف أخلاق زوجها جيداً، وهذا يدل على أن معرفة الشخص وصدقه يجعل الناس يثقون به في أصعب المواقف.</p>
+      <p><strong>الفائدة التربوية:</strong> 1- العلم أساس الدين: أول وصية إلهية كانت اقرأ، 2- أهمية الزوجة الصالحة التي تقف معك وقت الشدة، 3- الخوف من الله ليس ضعفاً، بل هو تعظيم لأمر الله.</p>`
+    },
+    // الدرس 4
+    {
+      title: "الصدع بالدعوة وأذى المشركين",
+      content: `<p><strong>الفقرة الأساسية:</strong> بعد الدعوة سراً، نزل قول الله: ﴿فَاصْدَعْ بِمَا تُؤْمَرُ وَأَعْرِضْ عَنِ الْمُشْرِكِينَ﴾ [الحجر: 94]. فبدأ النبي يدعو جهاراً، وصعد على جبل الصفا ونادى: "واصباحاه!" فلما اجتمعوا قال: "أرأيتم إن أخبرتكم أن خيلاً بسفح هذا الجبل تريد أن تغير عليكم، أكنتم مصدقيّ؟" قالوا: ما جربنا عليك كذباً. قال: "فإني نذير لكم بين يدي عذاب شديد". فأجابه عمه أبو لهب بقسوة: "تباً لك! ألهذا جمعتنا!" فأنزل الله سورة المسد. ثم بدأت قريش في إيذاء النبي وأصحابه، فصبروا.</p>
+      <p><strong>الدليل:</strong> عن ابن عباس رضي الله عنهما قال: لما نزلت ﴿وَأَنْذِرْ عَشِيرَتَكَ الْأَقْرَبِينَ﴾ [الشعراء: 214]، صعد النبي ﷺ على الصفا... (رواه البخاري، رقم 4971، ومسلم، رقم 208).</p>
+      <p><strong>الشرح المختصر:</strong> هنا بدأ النبي المواجهة مع الباطل معلناً التوحيد للعالمين. قريش عذبت الضعفاء، وحاصرت بني هاشم ثلاث سنوات، وأغروا الشعراء بهجائه، لكنه ثبت. قال النبي: "لقد أوذيت في الله وما أوذي أحد، وأخفت في الله وما أخيف أحد".</p>
+      <p><strong>النموذج التطبيقي (القصة الهادفة):</strong> لقي بلال بن رباح أشد العذاب من سيده أمية بن خلف، حيث كان يضربه ويضعه في الشمس الحارقة ويضعه على الرمال، ثم يضع عليه صخرة، ويقول له: "ارتد عن الإسلام". وكان بلال رغم كل هذا العذاب يقول: "أحد، أحد". وهكذا كان صبر الصحابة يضرب المثل الأعلى في الثبات على الدين.</p>
+      <p><strong>الفائدة التربوية:</strong> 1- الشجاعة في الحق: لا تخف أن تقول الحق، 2- الصبر على البلاء: طريق الجنة محفوف بالمكاره، 3- الصديق الصدوق يظهر وقت الأزمات.</p>`
+    },
+    // الدرس 5
+    {
+      title: "الإسراء والمعراج (الرحلة العظيمة)",
+      content: `<p><strong>الفقرة الأساسية:</strong> قبل الهجرة، وبعد أن اشتد الأذى، أسرى الله بنبيه ليلاً من المسجد الحرام إلى المسجد الأقصى على دابة اسمها "البراق". ثم عُرج به إلى السماوات العلى، فرأى الأنبياء، وفرضت عليه الصلوات الخمس في تلك الليلة. كانت هذه الرحلة بجسده وروحه يقظةً، وهي معجزة تسلية للنبي وتثبيتاً له.</p>
+      <p><strong>الدليل:</strong> قال تعالى: ﴿سُبْحَانَ الَّذِي أَسْرَىٰ بِعَبْدِهِ لَيْلًا مِنَ الْمَسْجِدِ الْحَرَامِ إِلَى الْمَسْجِدِ الْأَقْصَى الَّذِي بَارَكْنَا حَوْلَهُ لِنُرِيَهُ مِنْ آيَاتِنَا﴾ [الإسراء: 1].</p>
+      <p><strong>الشرح المختصر:</strong> في هذه الليلة، اجتمع النبي بجميع الأنبياء، وصلى بهم إماماً في المسجد الأقصى، ليتبين أنه خاتم الرسل. ولما عاد إلى مكة وأخبر قريشاً كذبوه، لكن أبا بكر صدقه فوراً فسمي "الصديق". فرضية الصلوات الخمس في السماء دليل على عظمتها.</p>
+      <p><strong>النموذج التطبيقي (القصة الهادفة):</strong> لما أخبر النبي قريشاً عن الإسراء قالوا: "صِفْ لنا بيت المقدس". فوصفه لهم النبي بدقة، مع أنه لم يره من قبل. ثم قال: "لقد رأيت في الطريق عيراً لقريش". ووصفها، فأجمع المشركون على تصديقه وقالوا: "هذا لا يمكن أن يكون كذباً". ولكنهم كفروا عناداً رغم أن عقولهم صدقت!</p>
+      <p><strong>الفائدة التربوية:</strong> 1- الصلاة هدية السماء: تذكر فضلها، 2- بعد الضيق فرج: الإسراء جاء بعد عام الحزن، 3- قيمة الصديق المصدق: كن كأبي بكر.</p>`
+    },
+    // الدرس 6
+    {
+      title: "الهجرة إلى المدينة (بداية النصر)",
+      content: `<p><strong>الفقرة الأساسية:</strong> بعد اشتداد الأذى، أذن الله بالهجرة إلى المدينة. هاجر المسلمون سراً، وبقي النبي وأبو بكر حتى أذن الله لهما. وفي ليلة الهجرة، اجتمع شباب قريش ليقتلوا النبي، فأوحى الله إليه بذلك، فخرج عليهم وهم أمام بيته وألقى عليهم التراب وهم لا يرونه، وتلا: ﴿وَجَعَلْنَا مِنْ بَيْنِ أَيْدِيهِمْ سَدًّا وَمِنْ خَلْفِهِمْ سَدًّا فَأَغْشَيْنَاهُمْ فَهُمْ لَا يُبْصِرُونَ﴾ [يس: 9]. وفي الطريق اختبأ مع أبي بكر في غار ثور ثلاثة أيام، ثم وصلا المدينة سالمين واستقبلهما المسلمون بفرح عظيم.</p>
+      <p><strong>الدليل:</strong> قال تعالى: ﴿إِلَّا تَنْصُرُوهُ فَقَدْ نَصَرَهُ اللَّهُ إِذْ أَخْرَجَهُ الَّذِينَ كَفَرُوا ثَانِيَ اثْنَيْنِ إِذْ هُمَا فِي الْغَارِ إِذْ يَقُولُ لِصَاحِبِهِ لَا تَحْزَنْ إِنَّ اللَّهَ مَعَنَا﴾ [التوبة: 40].</p>
+      <p><strong>الشرح المختصر:</strong> الهجرة لم تكن هروباً، بل بداية جديدة لإقامة دولة الإسلام. في الغار، قال النبي لأبي بكر كلمته الخالدة: "لا تحزن إن الله معنا". عندما وصل النبي إلى المدينة، بنى المسجد النبوي أول شيء ليكون مركز الدولة.</p>
+      <p><strong>النموذج التطبيقي (القصة الهادفة):</strong> في الغار، لما اقترب المشركون ووقفوا عند فم الغار، خاف أبو بكر وقال: "يا رسول الله، لو نظر أحدهم تحت قدميه لرآنا". فقال النبي: "يا أبا بكر، ما ظنك باثنين الله ثالثهما؟ لا تحزن إن الله معنا". لقد كانت ثقته بالله لا تتزعزع رغم الخطر المحيط بهم.</p>
+      <p><strong>الفائدة التربوية:</strong> 1- التخطيط للأهداف: الهجرة كانت خطة محكمة، 2- "إن الله معنا": مهما اشتد الخطر إذا كنت على حق، 3- الصحبة الصالحة: احرص على أصدقاء يحبونك.</p>`
+    },
+    // الدرس 7
+    {
+      title: "غزوة بدر الكبرى (يوم الفرقان)",
+      content: `<p><strong>الفقرة الأساسية:</strong> وقعت بدر في رمضان من السنة الثانية للهجرة. خرج المسلمون (314 رجلاً) للقاء قافلة لأبي سفيان، لكن القافلة أفلتت، وخرج جيش قريش (ألف مقاتل) بطراً. أنزل الله المطر ليثبت به الأقدام، وأمدهم بملائكة تقاتل معهم. وانتهت المعركة بنصر مؤزر، وقتل فيها صناديد قريش وأُسر سبعون. وفيها قال النبي: «اللَّهُمَّ أَنْجِزْ لِي مَا وَعَدْتَنِي، اللَّهُمَّ إِنْ تَهْلِكْ هَذِهِ الْعِصَابَةُ فَلَنْ تُعْبَدَ فِي الأَرْضِ» (رواه مسلم).</p>
+      <p><strong>الدليل:</strong> قال تعالى: ﴿وَلَقَدْ نَصَرَكُمُ اللَّهُ بِبَدْرٍ وَأَنْتُمْ أَذِلَّةٌ ۖ فَاتَّقُوا اللَّهَ لَعَلَّكُمْ تَشْكُرُونَ * إِذْ تَقُولُ لِلْمُؤْمِنِينَ أَلَنْ يَكْفِيَكُمْ أَنْ يُمِدَّكُمْ رَبُّكُمْ بِثَلَاثَةِ آلَافٍ مِنَ الْمَلَائِكَةِ...﴾ [آل عمران: 123-124].</p>
+      <p><strong>الشرح المختصر:</strong> بدر لم تكن مجرد معركة عسكرية، بل كانت معجزة إلهية. الفارق العددي كان كبيراً لكن الإيمان قلب الموازين. استشار النبي أصحابه ليعلمنا مبدأ الشورى. دعاؤه في ليلة بدر كان دعاء الملهوف الواثق بالله. بعد النصر، عامل الأسرى بإحسان وجعل الفداء تعليم الصبيان.</p>
+      <p><strong>النموذج التطبيقي (القصة الهادفة):</strong> قال عتبة بن ربيعة قبل المعركة: "يا معشر قريش، هؤلاء قومكم، إن أصبتهم أصبتكم، وإن قتلوكم قتلوكم". وحاول ثني قريش عن القتال، لكن أبا جهل رفض وقال: "والله لا نرجع حتى ننحر الجزور، ونسقي الخمر، وتضرب علينا القيان". فأعماه الكبر، فكانت الهزيمة.</p>
+      <p><strong>الفائدة التربوية:</strong> 1- النصر مع الصبر والتقوى، 2- الشورى: استشر والديك ومعلميك، 3- الرحمة بعد النصر: تعامل بالعفو والإحسان.</p>`
+    },
+    // الدرس 8
+    {
+      title: "غزوة أحد (درس في الطاعة)",
+      content: `<p><strong>الفقرة الأساسية:</strong> وقعت أحد في شوال من السنة الثالثة للهجرة. أرادت قريش الانتقام لبدر. نزل الجيش (700 مقاتل)، ووضع النبي ﷺ خمسين رامياً على جبل صغير وقال لهم: «احموا ظهورنا، لا تبرحوا مكانكم». بدأ القتال وانتصر المسلمون، فظن الرماة أن المعركة انتهت، فترك معظمهم أماكنهم لجمع الغنائم مخالفين أمر القائد. فهاجم خالد بن الوليد من الخلف، وانقلب النصر هزيمة، وقتل سبعون من المسلمين بينهم حمزة عم النبي ﷺ.</p>
+      <p><strong>الدليل:</strong> قال تعالى: ﴿وَلَقَدْ صَدَقَكُمُ اللَّهُ وَعْدَهُ إِذْ تَحُسُّونَهُمْ بِإِذْنِهِ ۖ حَتَّىٰ إِذَا فَشِلْتُمْ وَتَنَازَعْتُمْ فِي الْأَمْرِ وَعَصَيْتُمْ...﴾ [آل عمران: 152].</p>
+      <p><strong>الشرح المختصر:</strong> أحد درس عظيم في أن المعصية سبب للهزيمة. لم يخسر المسلمون بسبب قلة العدد، بل لأنهم خالفوا أمر النبي. ومع ذلك، رحمة الله واسعة فلم يستأصلهم. والنبي وهو مجروح قال: "كيف يفلح قوم خضبوا وجه نبيهم؟!" ولكنه لم يدع عليهم بل قال: "اللهم اهد قومي فإنهم لا يعلمون".</p>
+      <p><strong>النموذج التطبيقي (القصة الهادفة):</strong> أصيب النبي ﷺ في وجهه وكسرت رباعيته وشج وجهه. ودخلت حلقتا المغفر في خده، فجعل الصحابة ينزعونهما بأسنانهم ويهرعون لوقف النزيف. ولما رأى النبي أخت حمزة تبكي على أخيها، قال لها: "عليك بالصبر". وكفن حمزة بقميص واحد لأنه قُطع في المعركة إرباً.</p>
+      <p><strong>الفائدة التربوية:</strong> 1- طاعة القائد واجبة، 2- الطمع يهلك، 3- راجع نفسك عند المشاكل: هل عصيت الله في شيء؟</p>`
+    },
+    // الدرس 9
+    {
+      title: "غزوة الخندق (الأحزاب)",
+      content: `<p><strong>الفقرة الأساسية:</strong> في السنة الخامسة للهجرة، تحزبت قبائل العرب واليهود (عشرة آلاف مقاتل) لغزو المدينة. فأشار سلمان الفارسي بحفر خندق حول المدينة. وحفر المسلمون الخندق في برد شديد وجوع. وأثناء الحفر اعترضتهم صخرة عظيمة، فضربها النبي ثلاث ضربات، كل ضربة يخرج نور. وحاصر الأحزاب المدينة شهراً، ثم أرسل الله ريحاً وجنوداً قلبت خيامهم وقدورهم فانسحبوا مهزومين.</p>
+      <p><strong>الدليل:</strong> قال تعالى: ﴿يَا أَيُّهَا الَّذِينَ آمَنُوا اذْكُرُوا نِعْمَةَ اللَّهِ عَلَيْكُمْ إِذْ جَاءَتْكُمْ جُنُودٌ فَأَرْسَلْنَا عَلَيْهِمْ رِيحًا وَجُنُودًا لَمْ تَرَوْهَا...﴾ [الأحزاب: 9].</p>
+      <p><strong>الشرح المختصر:</strong> غزوة الخندق كانت حصاراً رهيباً، وصف الله حال المؤمنين بأن القلوب بلغت الحناجر من شدة الخوف. ومع هذا الخوف، كان إيمانهم ثابتاً. بينما المنافقون قالوا: "ما وعدنا الله ورسوله إلا غروراً". النبي شارك الصحابة في الحفر وكان على بطنه حجر من الجوع.</p>
+      <p><strong>النموذج التطبيقي (القصة الهادفة):</strong> لما اشتد الحصار، جاء حذيفة بن اليمان على جيش قريش ليتجسس، فأوهمهم أنه منهم. وعندما أرادوا الدخول إلى المدينة، هبت ريح عاصفة قلعت خيامهم وقدورهم، وأظلمت الجو، وألقى الله الرعب في قلوبهم. فانسحبوا دون قتال، وكان النصر من عند الله.</p>
+      <p><strong>الفائدة التربوية:</strong> 1- الأخذ بالأسباب: حفر الخندق فكرة مبتكرة، 2- معنى القدوة: النبي شارك في العمل، 3- بعد الزلزال يأتي النصر: تمسك بحبل الله.</p>`
+    },
+    // الدرس 10
+    {
+      title: "صلح الحديبية (درس في الحكمة)",
+      content: `<p><strong>الفقرة الأساسية:</strong> في السنة السادسة للهجرة، رأى النبي في منامه أنه دخل مكة معتمراً. فخرج بأصحابه (1400) ومنعتهم قريش، ودارت مفاوضات انتهت بصلح الحديبية. وكانت شروطه: وقف الحرب عشر سنوات، والعودة هذا العام مع دخول العام التالي، ومن أسلم من أهل مكة يُرد. بدت الشروط ظاهرياً في صالح قريش، وغضب بعض الصحابة، لكن النبي وافق لحكمة. ثم نزلت سورة الفتح، وقال عنه النبي: "إنه فتح". وبالفعل، كانت تمهيداً لفتح مكة.</p>
+      <p><strong>الدليل:</strong> قال تعالى: ﴿لَقَدْ رَضِيَ اللَّهُ عَنِ الْمُؤْمِنِينَ إِذْ يُبَايِعُونَكَ تَحْتَ الشَّجَرَةِ فَعَلِمَ مَا فِي قُلُوبِهِمْ فَأَنْزَلَ السَّكِينَةَ عَلَيْهِمْ وَأَثَابَهُمْ فَتْحًا قَرِيبًا﴾ [الفتح: 18].</p>
+      <p><strong>الشرح المختصر:</strong> في الحديبية بايع الصحابة النبي على القتال حتى الموت (بيعة الرضوان). ورغم أن الشروط بدت مجحفة، ظهرت الحكمة لاحقاً: ففي فترة السلام، دخل الناس في دين الله أفواجاً، وكان عدد من أسلم في السنتين التاليتين أكثر مما أسلم في السنوات الماضية كلها.</p>
+      <p><strong>النموذج التطبيقي (القصة الهادفة):</strong> اعترض عمر بن الخطاب على الصلح بشدة وقال: "ألسنا على حق وهم على باطل؟" لكن النبي قال: "أنا عبد الله ورسوله، لن أخالف أمره". فلما نزلت سورة الفتح بالبشارة، عرف عمر حكمة النبي وتاب إلى الله وانشرح صدره.</p>
+      <p><strong>الفائدة التربوية:</strong> 1- قد ترى الشيء شراً وهو خير، ثق في حكمة الله، 2- التنازل الحكيم ليس ضعفاً، 3- الطاعة عند الشدة حتى لو لم تفهم الحكمة فوراً.</p>`
+    },
+    // الدرس 11
+    {
+      title: "فتح مكة (درس في العفو)",
+      content: `<p><strong>الفقرة الأساسية:</strong> في السنة الثامنة للهجرة، نقضت قريش الصلح. فتجهز النبي بجيش عظيم قوامه عشرة آلاف مقاتل، وسار إلى مكة بسرية تامة. دخل مكة من أربعة محاور دون مقاومة. وقف النبي على باب الكعبة، وحطم الأصنام وهو يتلو: ﴿وَقُلْ جَاءَ الْحَقُّ وَزَهَقَ الْبَاطِلُ ۚ إِنَّ الْبَاطِلَ كَانَ زَهُوقًا﴾ [الإسراء: 81]. ثم التفت إلى قريش وقال: "يا معشر قريش، ما تظنون أني فاعل بكم؟" قالوا: خيراً، أخ كريم وابن أخ كريم. قال: "اذهبوا فأنتم الطلقاء".</p>
+      <p><strong>الدليل:</strong> قال تعالى: ﴿إِذَا جَاءَ نَصْرُ اللَّهِ وَالْفَتْحُ * وَرَأَيْتَ النَّاسَ يَدْخُلُونَ فِي دِينِ اللَّهِ أَفْوَاجًا﴾ [النصر: 1-2].</p>
+      <p><strong>الشرح المختصر:</strong> فتح مكة تتويج للصبر والجهاد. دخلها النبي متواضعاً حانياً رأسه شكراً لله، وعفوه عن أهل مكة ليس له نظير في تاريخ الفاتحين. لم ينتقم لنفسه بل سامحهم جميعاً. قارن ذلك بأي فاتح في التاريخ، ستجد الفرق واضحاً.</p>
+      <p><strong>النموذج التطبيقي (القصة الهادفة):</strong> كان أبو سفيان قد فر من المعركة، وجاء إلى النبي ﷺ وهو خائف، فقال له: "يا رسول الله، أمان لي". فقال النبي: "من دخل دار أبي سفيان فهو آمن، ومن أغلق بابه فهو آمن، ومن دخل المسجد فهو آمن". بهذا العفو الكبير دخل الناس في دين الله أفواجاً، وأصبح الأعداء السابقون من أكبر أنصار الإسلام.</p>
+      <p><strong>الفائدة التربوية:</strong> 1- العفو عند المقدرة، 2- التواضع في النصر، 3- تحطيم الأصنام المعاصرة (الهاتف، الشهرة) في قلبك.</p>`
+    },
+    // الدرس 12
+    {
+      title: "حجة الوداع (إكمال الدين)",
+      content: `<p><strong>الفقرة الأساسية:</strong> في السنة العاشرة للهجرة، أعلن النبي عن الحج، وخرج معه أكثر من مائة ألف مسلم. حج بهم حجة كاملة وعلمهم المناسك. وفي يوم عرفة، نزل عليه قول الله: ﴿الْيَوْمَ أَكْمَلْتُ لَكُمْ دِينَكُمْ وَأَتْمَمْتُ عَلَيْكُمْ نِعْمَتِي وَرَضِيتُ لَكُمُ الْإِسْلَامَ دِينًا﴾ [المائدة: 3]. فبكى أبو بكر وعرف أن النبي سيرحل. ثم خطب النبي خطبة الوداع، وأكد فيها على حرمة الدماء والأموال والأعراض، وأوصى بالنساء خيراً، وأنه لا فضل لعربي على أعجمي إلا بالتقوى.</p>
+      <p><strong>الدليل:</strong> قال النبي في خطبته: «أَيُّهَا النَّاسُ، إِنَّ رَبَّكُمْ وَاحِدٌ... أَلَا لاَ فَضْلَ لِعَرَبِيٍّ عَلَى عَجَمِيٍّ، وَلاَ لِعَجَمِيٍّ عَلَى عَرَبِيٍّ إِلَّا بِالتَّقْوَى...» (رواه أحمد، وصححه الألباني).</p>
+      <p><strong>الشرح المختصر:</strong> حجة الوداع هي أعظم خطاب في التاريخ. في يوم واحد، أكمل الله الدين، وأعلن النبي حقوق الإنسان، وساوى بين جميع البشر. وقف على جبل عرفات ليودع أمته، وبعد 23 عاماً من البعثة، صار الإسلام ديناً كاملاً.</p>
+      <p><strong>النموذج التطبيقي (القصة الهادفة):</strong> في خطبته، قال النبي: "أيها الناس، اسمعوا قولي، فإني لا أدري لعلي لا ألقاكم بعد عامي هذا بهذا الموقف أبداً". فبكى الصحابة بكاءً شديداً. ثم قال: "استوصوا بالنساء خيراً، فإنهن عندكم عوان". وأوصى بالتقوى والسمع والطاعة، ثم سألهم: "هل بلغت؟" فقالوا: "نعم". قال: "اللهم اشهد".</p>
+      <p><strong>الفائدة التربوية:</strong> 1- الدين كامل، فلا تلتفت لدعوات تغييره، 2- لا للعنصرية، الناس سواسية، 3- حقوق الإنسان من الإسلام سبق العالم كله.</p>`
+    },
+    // الدرس 13
+    {
+      title: "مرض النبي ووفاته (اللحاق بالرفيق الأعلى)",
+      content: `<p><strong>الفقرة الأساسية:</strong> بعد حجة الوداع بشهور، بدأ مرض النبي ﷺ. وفي أيام مرضه، كان يؤم الناس أبو بكر بأمره. وفي اليوم الأخير، كشف النبي ستر حجرته ونظر إلى الصحابة وهم يصلون فتبسم. ثم اشتد به المرض، ودخلت ابنته فاطمة فقالت: "واكرب أبتاه!" فقال: "لا كرب على أبيك بعد اليوم". ثم سارها بشيء فبكت، ثم سارها بشيء فضحكت. ولما ثقل، كان يقول: "اللهم في الرفيق الأعلى". وفاضت روحه يوم الإثنين 12 ربيع الأول سنة 11هـ، وكان رأسه على فخذ عائشة.</p>
+      <p><strong>الدليل:</strong> قال تعالى: ﴿إِنَّكَ مَيِّتٌ وَإِنَّهُمْ مَيِّتُونَ﴾ [الزمر: 30]. وعن عائشة: «قُبِضَ النَّبِيُّ ﷺ وَرَأْسُهُ بَيْنَ سَحْرِي وَنَحْرِي...» (رواه البخاري، رقم 4448).</p>
+      <p><strong>الشرح المختصر:</strong> وفاة النبي كانت أعظم مصيبة. لكنه لم يتركهم إلا وقد اكتمل الدين. لما توفي، وقف عمر وقال: "من قال إن محمداً مات ضربته بسيفي". وجاء أبو بكر وقبله وقال: "طبت حياً وميتاً". ثم خرج وقال كلمته الشهيرة: "من كان يعبد محمداً فإن محمداً قد مات، ومن كان يعبد الله فإن الله حي لا يموت".</p>
+      <p><strong>النموذج التطبيقي (القصة الهادفة):</strong> لما سألت عائشة فاطمة بعد وفاة النبي عن سبب ضحكها وبكائها، قالت فاطمة: "أخبرني أنه سيموت من مرضه هذا، فبكيت. ثم أخبرني أني أول أهله لحوقاً به، وأني سيدة نساء أهل الجنة، فضحكت". وكانت فاطمة أول أهله موتاً بعده بستة أشهر.</p>
+      <p><strong>الفائدة التربوية:</strong> 1- عبادة الله وحده لا عبادة البشر، 2- فضل العلم والحكمة وقت المصيبة، 3- الاستعداد للموت: ماذا أعددت للقاء الله؟</p>`
+    }
+  ]
+}                    
+                    
+];
+
+// ================================================================
+// FORTRESSES DATA (only "أركان الإيمان")
+// ================================================================
+const FORTRESSES = [
+  {
+    id: 1, title: "أركان الإيمان", emoji: "⭐", color: "#D4AF37",
+    badge: { icon: "⭐", name: "فارس الإيمان", desc: "أكملت حصن أركان الإيمان" },
+    lessons: [
+      { title: "ما هو التوحيد؟", quiz: [
+          { q:"ما هو تعريف التوحيد؟", opts:["إفراد الله بالعبادة","الصلاة كل يوم","قراءة القرآن","الصيام"], a:0, hint:"التوحيد هو أن تعبد الله وحده لا شريك له" },
+          { q:"لماذا خلقنا الله؟", opts:["للعب","لإفراده بالعبادة","لأكل الطعام","للنوم"], a:1, hint:"قال تعالى: وما خلقت الجن والإنس إلا ليعبدون" },
+          { q:"ما معنى 'لا إله إلا الله'؟", opts:["الله موجود","لا معبود بحق إلا الله","الله في السماء","الله واحد فقط"], a:1, hint:"لا معبود بحق إلا الله — هذا هو المعنى الصحيح" }
+        ]},
+      { title: "أنواع التوحيد", quiz: [
+          { q:"كم نوعاً للتوحيد؟", opts:["نوع واحد","نوعان","ثلاثة أنواع","أربعة أنواع"], a:2, hint:"التوحيد ثلاثة: ربوبية، ألوهية، أسماء وصفات" },
+          { q:"ما هو توحيد الربوبية؟", opts:["الصلاة لله","الإيمان بأن الله هو الخالق الرازق","حفظ القرآن","الصوم"], a:1, hint:"الربوبية: الإقرار بأن الله هو الخالق المدبّر" },
+          { q:"أي سورة تحتوي على التوحيد بشكل جميل؟", opts:["البقرة","الفاتحة","الإخلاص","يس"], a:2, hint:"قل هو الله أحد — سورة الإخلاص" }
+        ]},
+      { title: "الإيمان بأسماء الله", quiz: [
+          { q:"كم اسماً لله؟", opts:["66","77","99","100"], a:2, hint:"قال النبي ﷺ: إن لله تسعة وتسعين اسماً" },
+          { q:"ماذا يعني اسم 'الرحمن'؟", opts:["يعاقب","ذو الرحمة الواسعة","يرزق فقط","القوي"], a:1, hint:"الرحمن: ذو الرحمة الواسعة لجميع الخلق" },
+          { q:"كيف نؤمن بصفات الله؟", opts:["نشبّهها بصفاتنا","نثبتها دون تشبيه","ننكرها","لا نؤمن بها"], a:1, hint:"ليس كمثله شيء — نثبت ولا نشبّه" }
+        ]},
+      { title: "محبة الله وخوفه ورجاؤه", quiz: [
+          { q:"على كم ركيزة تقوم العبادة الصحيحة؟", opts:["1","2","3","4"], a:2, hint:"محبة + خوف + رجاء = ثلاث ركائز" },
+          { q:"ما الفرق بين الخوف والرجاء؟", opts:["لا فرق","الخوف يبعد عن المعاصي والرجاء يمنع اليأس","الرجاء أهم","الخوف أهم"], a:1, hint:"الخوف يكبح المعاصي، والرجاء يمنع اليأس من رحمة الله" },
+          { q:"ماذا يحدث إذا غاب الحب؟", opts:["لا شيء","تصير العبادة ثقيلة وكرهاً","تزيد العبادة","يزيد الخوف"], a:1, hint:"بدون المحبة تصير العبادة واجباً ثقيلاً لا شوقاً" }
+        ]},
+      { title: "الإيمان بالملائكة", quiz: [
+          { q:"مم خُلقت الملائكة؟", opts:["من تراب","من نار","من نور","من ماء"], a:2, hint:"خلقت الملائكة من نور — رواه مسلم" },
+          { q:"ما مهمة الملكين الكاتبين؟", opts:["حفظ الإنسان","كتابة الأعمال","حراسة الأرض","إنزال المطر"], a:1, hint:"الكرام الكاتبون يكتبون كل قول وعمل" },
+          { q:"من الملك الموكل بالوحي؟", opts:["ميكائيل","إسرافيل","جبريل","مالك"], a:2, hint:"جبريل عليه السلام هو الأمين على الوحي" }
+        ]},
+      { title: "الإيمان بالكتب السماوية", quiz: [
+          { q:"ما آخر الكتب السماوية؟", opts:["التوراة","الإنجيل","الزبور","القرآن الكريم"], a:3, hint:"القرآن الكريم هو الكتاب الخاتم الذي حفظه الله" },
+          { q:"من تكفّل بحفظ القرآن؟", opts:["الصحابة","العلماء","الله تعالى","الملائكة"], a:2, hint:"إنا نحن نزلنا الذكر وإنا له لحافظون" },
+          { q:"ما الذي حدث للتوراة والإنجيل؟", opts:["حفظا كالقرآن","حُرّفا على مر القرون","لا يزالان صحيحين","أحرقا"], a:1, hint:"الكتب السابقة دخلها التحريف، أما القرآن فمحفوظ" }
+        ]},
+      { title: "الإيمان بالرسل", quiz: [
+          { q:"من هو خاتم الأنبياء؟", opts:["موسى عليه السلام","عيسى عليه السلام","إبراهيم عليه السلام","محمد ﷺ"], a:3, hint:"وخاتم النبيين — محمد ﷺ آخر الأنبياء" },
+          { q:"ما الذي اتفق عليه جميع الأنبياء؟", opts:["الصوم فقط","التوحيد","الجهاد","الصلاة"], a:1, hint:"كل الأنبياء جاؤوا برسالة التوحيد" },
+          { q:"ما هو الفرق بين النبي والرسول؟", opts:["لا فرق","الرسول أُرسل بشريعة جديدة","النبي أعلى درجة","كلهم رسل فقط"], a:1, hint:"الرسول أُرسل بشريعة ورسالة جديدة لقومه" }
+        ]},
+      { title: "الإيمان باليوم الآخر", quiz: [
+          { q:"ماذا يشمل الإيمان باليوم الآخر؟", opts:["الموت فقط","البعث والحساب والجنة والنار","الجنة فقط","الموت والقبر"], a:1, hint:"البعث + الحشر + الحساب + الميزان + الصراط + الجنة + النار" },
+          { q:"ما معنى الآية: فمن يعمل مثقال ذرة خيراً يره؟", opts:["الخير المهم فقط يُحسب","حتى الشيء الصغير جداً يُحسب","الخير لا يُحسب","النوايا فقط تُحسب"], a:1, hint:"حتى وزن الذرة من الخير أو الشر — لا يضيع أي عمل" },
+          { q:"كيف يؤثر الإيمان باليوم الآخر على السلوك؟", opts:["لا يؤثر","يجعلنا نعمل الصالحات","يجعلنا نخاف الناس","يجعلنا نحب الدنيا"], a:1, hint:"من يعلم بالحساب، يتحرى الصدق والعمل الصالح" }
+        ]},
+      { title: "الإيمان بالقدر", quiz: [
+          { q:"كم مرتبة للإيمان بالقدر؟", opts:["مرتبة","مرتبتان","ثلاث","أربع"], a:1, hint:"قضاء الله عليك + أفعالك أنت = مرتبتان" },
+          { q:"ما المقصود بالجمع بين القدر والعمل؟", opts:["نستسلم للقدر ولا نعمل","نأخذ بالأسباب ونتوكل على الله","نتوكل فقط","نعمل فقط"], a:1, hint:"خذ بالأسباب ثم توكل — هذا هو الجمع الصحيح" },
+          { q:"كيف يمنحك الإيمان بالقدر السكينة؟", opts:["يجعلك تيأس","يجعلك صبوراً في البلاء شاكراً في النعمة","لا يمنح سكينة","يجعلك كسولاً"], a:1, hint:"من يؤمن بالقدر لا يجزع ولا ييأس مهما اشتد البلاء" }
+        ]},
+      { title: "الشرك بالله وخطورته", quiz: [
+          { q:"ما أعظم ذنب عند الله؟", opts:["السرقة","الكذب","الشرك بالله","الغيبة"], a:2, hint:"إن الله لا يغفر أن يشرك به — الشرك أعظم الذنوب" },
+          { q:"ما هو الشرك الأصغر؟", opts:["السرقة","عبادة الأصنام","الرياء في العبادة","الكذب"], a:2, hint:"الرياء: أن تعمل الصالحات لأجل ثناء الناس لا لله" },
+          { q:"ما الفرق بين الشرك الأكبر والأصغر؟", opts:["لا فرق","الأكبر يُخرج من الملة والأصغر لا يُخرج","الأصغر أخطر","كلاهما سواء"], a:1, hint:"الأكبر يُخرج من الإسلام، الأصغر ذنب خطير لكن لا يُخرج منه" }
+        ]},
+      { title: "البدعة وخطرها", quiz: [
+          { q:"ما تعريف البدعة؟", opts:["كل جديد في الحياة","إحداث شيء في الدين لم يأذن به الله","أي تغيير في العادات","استخدام التقنية"], a:1, hint:"البدعة: ما أُحدث في الدين بقصد التعبد دون إذن الله" },
+          { q:"ما هو معيار البدعة الصحيح؟", opts:["إذا أحبه الناس","إذا لم يفعله النبي ﷺ في العبادات","إذا كان قديماً","إذا قاله العلماء"], a:1, hint:"السؤال: هل فعله النبي ﷺ؟ إن لا، فابتعد" },
+          { q:"ما الذي يحمي من البدعة؟", opts:["اتباع كل جديد","التمسك بالسنة الثابتة","سؤال كل أحد","القياس على العادات"], a:1, hint:"التمسك بالسنة الصحيحة هو الحماية من كل بدعة" }
+        ]},
+      { title: "الولاء والبراء", quiz: [
+          { q:"ما معنى الولاء؟", opts:["كراهية غير المسلمين","محبة المؤمنين ونصرتهم","عدم التعامل مع أحد","مصادقة الكل"], a:1, hint:"الولاء: محبة المؤمنين ومناصرتهم في الحق" },
+          { q:"كيف يُعامَل غير المسلم المسالم؟", opts:["بالكراهية","بالإحسان والعدل","بالإهمال","بالعداء"], a:1, hint:"لا ينهاكم الله عن الذين لم يقاتلوكم أن تبروهم وتقسطوا إليهم" },
+          { q:"ما أساس الولاء في الإسلام؟", opts:["الجنسية","القبيلة","الإيمان","اللغة"], a:2, hint:"الولاء قائم على الإيمان بالله، لا العرق أو الجنسية" }
+        ]}
+    ]
+  },
+   // أضف هذا الكائن داخل مصفوفة FORTRESSES (بعد الحصون الموجودة)
+{
+  id: 2,
+  title: "آياتي: حفظ وتفسير وعمل",
+  emoji: "📖",
+  color: "#2980B9",
+  badge: {
+    icon: "📖",
+    name: "حافظ القرآن",
+    desc: "أكملت كراسة آياتي القرآنية"
+  },
+  lessons: [
+    // الدرس الأول: الفاتحة
+    {
+      title: "سورة الفاتحة (أم الكتاب)",
+      quiz: [
+        { q: "ما هي أعظم سورة في القرآن؟", opts: ["الفاتحة", "الإخلاص", "آية الكرسي", "الملك"], a: 0, hint: "إنها السبع المثاني والقرآن العظيم" },
+        { q: "كم مرة نقرأ الفاتحة في اليوم في الصلوات المفروضة؟", opts: ["7", "10", "17", "20"], a: 2, hint: "عدد الصلوات الخمس × عدد الركعات التي تُقرأ فيها الجهرية والسرية" },
+        { q: "ماذا تعني عبارة 'إياك نعبد وإياك نستعين'؟", opts: ["نطلب المال", "نفرد الله بالعبادة ونطلب عونه", "نعبد الأصنام", "نستعين بالبشر"], a: 1, hint: "إخلاص العبادة لله وطلب المعونة منه وحده" }
+      ]
+    },
+    // الدرس الثاني: آية الكرسي
+    {
+      title: "آية الكرسي (أعظم آية)",
+      quiz: [
+        { q: "ما هي أعظم آية في كتاب الله؟", opts: ["آية الكرسي", "الفاتحة", "خواتيم البقرة", "سورة الإخلاص"], a: 0, hint: "فيها توحيد الله وعلوه وعظمته" },
+        { q: "ماذا تفعل قراءة آية الكرسي بعد كل صلاة مكتوبة؟", opts: ["تزيد المال", "تمنع دخول الجنة", "تدخل الجنة إذا مات", "تكفر الذنوب"], a: 2, hint: "الحديث: لم يمنعه من دخول الجنة إلا الموت" },
+        { q: "ما معنى اسم الله 'القيوم'؟", opts: ["الذي ينام", "القائم بتدبير كل شيء", "الذي يموت", "الذي يخلق فقط"], a: 1, hint: "الله لا تأخذه سنة ولا نوم، وهو يدبر شؤون الخلق" }
+      ]
+    },
+    // الدرس الثالث: آمن الرسول
+    {
+      title: "آمن الرسول (خواتيم البقرة)",
+      quiz: [
+        { q: "كم عدد الآيات في خواتيم سورة البقرة؟", opts: ["1", "2", "3", "4"], a: 1, hint: "الآيتان رقم 285 و 286" },
+        { q: "ماذا تفعل قراءة هاتين الآيتين في الليل؟", opts: ["تجلب المال", "تكفي الإنسان من كل سوء", "تجعل الإنسان نائماً", "تسبب الكوابيس"], a: 1, hint: "قال النبي ﷺ: من قرأ بهما في ليلة كفتاه" },
+        { q: "ماذا تعني الآية 'لا يكلف الله نفساً إلا وسعها'؟", opts: ["الله يطلب المستحيل", "الله لا يكلف فوق الطاقة", "الله لا يحاسب", "العمل غير مهم"], a: 1, hint: "الله يعلم حدود قدرة الإنسان" }
+      ]
+    },
+    // الدرس الرابع: الإخلاص
+    {
+      title: "سورة الإخلاص (قل هو الله أحد)",
+      quiz: [
+        { q: "كم تعدل سورة الإخلاص من القرآن؟", opts: ["الثلث", "النصف", "الربع", "الخمس"], a: 0, hint: "قال النبي ﷺ: تعدل ثلث القرآن" },
+        { q: "ما معنى اسم الله 'الصمد'؟", opts: ["الذي ينام", "السيد الذي يصمد إليه الخلق في حوائجهم", "الذي يموت", "الذي يخلق فقط"], a: 1, hint: "الله هو المقصود في كل حاجة" },
+        { q: "ما سبب دخول الصحابي الجنة الذي أحب هذه السورة؟", opts: ["كثرة صلاته", "حبّه للسورة", "كثرة ماله", "صيامه"], a: 1, hint: "قال النبي ﷺ: حبك إياها أدخلك الجنة" }
+      ]
+    },
+    // الدرس الخامس: المعوذتان
+    {
+      title: "سورتا الفلق والناس (المعوذتان)",
+      quiz: [
+        { q: "ماذا تسمى سورتا الفلق والناس؟", opts: ["الطارقتان", "المعوذتان", "الزهروان", "المرسلات"], a: 1, hint: "هما الحصن من الشرور" },
+        { q: "ممن نستعيذ في سورة الفلق؟", opts: ["من شر الحاسد", "من شر السحر", "من شر الليل", "جميع ما ذكر"], a: 3, hint: "الآيات تذكر شر الخلق، والغاسق، والنفاثات، والحاسد" },
+        { q: "من هو 'الوسواس الخناس'؟", opts: ["ملك الموت", "الشيطان الذي يوسوس ثم يختفي عند ذكر الله", "الإنسان الشرير", "الجني الصالح"], a: 1, hint: "يوسوس في الصدور، فإذا ذكرت الله خنس (اختفى)" }
+      ]
+    },
+    // الدرس السادس: الملك
+    {
+      title: "سورة الملك (تبارك)",
+      quiz: [
+        { q: "كم عدد آيات سورة الملك؟", opts: ["20", "30", "40", "50"], a: 1, hint: "ثلاثون آية" },
+        { q: "ماذا تفعل سورة الملك لمن قرأها كل ليلة؟", opts: ["تزيد المال", "تشفع له وتنجيه من عذاب القبر", "تجلب النوم", "تسبب المرض"], a: 1, hint: "قال النبي ﷺ: شفعت لرجل حتى غفر له" },
+        { q: "لماذا خلقنا الله حسب الآية في سورة الملك؟", opts: ["لنأكل ونشرب", "ليبلونا أينا أحسن عملاً", "لنلهو", "لنعمر الأرض"], a: 1, hint: "الذي خلق الموت والحياة ليبلوكم أيكم أحسن عملاً" }
+      ]
+    },
+    // الدرس السابع: الكهف
+    {
+      title: "سورة الكهف (العصمة من الدجال)",
+      quiz: [
+        { q: "كم آية من أول سورة الكهف يجب حفظها للعصمة من الدجال؟", opts: ["5", "7", "10", "15"], a: 2, hint: "من حفظ عشر آيات من أولها عصم من الدجال" },
+        { q: "متى يستحب قراءة سورة الكهف؟", opts: ["يوم الجمعة", "يوم السبت", "يوم الاثنين", "كل يوم"], a: 0, hint: "هي نور بين الجمعتين" },
+        { q: "ما هي قصة الفتية التي ذكرت في السورة؟", opts: ["قصة أصحاب الكهف", "قصة موسى والخضر", "قصة ذو القرنين", "قصة آدم"], a: 0, hint: "فتية آمنوا بربهم وفرّوا بدينهم إلى الكهف" }
+      ]
+    },
+    // الدرس الثامن: العصر
+    {
+      title: "سورة العصر (دستور النجاة)",
+      quiz: [
+        { q: "كم عدد آيات سورة العصر؟", opts: ["1", "2", "3", "4"], a: 2, hint: "ثلاث آيات قصيرات" },
+        { q: "ما هي الصفات الأربع التي تنجي الإنسان من الخسارة؟", opts: ["المال والبنون", "الإيمان والعمل الصالح والتواصي بالحق والصبر", "الصحة والقوة", "الجاه والسلطان"], a: 1, hint: "الآية تذكر الإيمان، العمل الصالح، التواصي بالحق، التواصي بالصبر" },
+        { q: "ماذا قال الإمام الشافعي عن سورة العصر؟", opts: ["إنها أصعب سورة", "لو ما أنزل الله حجة إلا هذه لكفتهم", "إنها سورة المدثر", "إنها سورة المزمل"], a: 1, hint: "رغم قصرها فهي كافية كمنهج حياة" }
+      ]
+    },
+    // الدرس التاسع: الضحى
+    {
+      title: "سورة الضحى (المواساة الإلهية)",
+      quiz: [
+        { q: "لماذا نزلت سورة الضحى؟", opts: ["لتهديد الكفار", "لمواساة النبي ﷺ بعد انقطاع الوحي", "لإباحة الزواج", "للحديث عن الجهاد"], a: 1, hint: "نزلت عندما قال المشركون: ودّع ربك وقلى" },
+        { q: "ماذا وعد الله نبيه في الآية 'ولسوف يعطيك ربك فترضى'؟", opts: ["الشفاعة العظمى والكوثر", "المال الكثير", "النصر على الأعداء", "الزواج"], a: 0, hint: "سيعطيه حتى يرضى، ومن ذلك الشفاعة والكوثر" },
+        { q: "كيف كان حال النبي ﷺ قبل البعثة حسب السورة؟", opts: ["غنياً", "يتيماً وآواه وضالاً فهدى وعائلاً فأغنى", "ملكاً", "عالماً"], a: 1, hint: "ألم يجدك يتيماً فآوى، ووجدك ضالاً فهدى، ووجدك عائلاً فأغنى" }
+      ]
+    },
+    // الدرس العاشر: القدر
+    {
+      title: "سورة القدر (فضلها العظيم)",
+      quiz: [
+        { q: "ليلة القدر خير من كم شهراً؟", opts: ["ألف شهر", "مئة شهر", "عشرة أشهر", "ثلاثمئة شهر"], a: 0, hint: "ليلة القدر خير من ألف شهر (83 سنة)" },
+        { q: "في أي شهر تكون ليلة القدر؟", opts: ["شعبان", "رمضان", "ذو الحجة", "محرم"], a: 1, hint: "في العشر الأواخر من رمضان" },
+        { q: "ماذا قال النبي ﷺ لمن قام ليلة القدر إيماناً واحتساباً؟", opts: ["يدخل الجنة", "يغفر له ما تقدم من ذنبه", "يعطى مالاً", "يُشفع في أهله"], a: 1, hint: "غفر له ما تقدم من ذنبه" }
+      ]
+    },
+    // الدرس الحادي عشر: لقمان
+    {
+      title: "وصايا لقمان لابنه",
+      quiz: [
+        { q: "ما هي أول وصية قالها لقمان لابنه؟", opts: ["أقم الصلاة", "لا تشرك بالله", "بر الوالدين", "اصبر"], a: 1, hint: "يا بني لا تشرك بالله إن الشرك لظلم عظيم" },
+        { q: "ماذا قال لقمان عن المشي والصوت؟", opts: ["امشِ بسرعة وارفع صوتك", "اقصد في مشيك واغضض من صوتك", "امشِ بهدوء ولا تتكلم", "امشِ في وسط الطريق"], a: 1, hint: "إن أنكر الأصوات لصوت الحمير" },
+        { q: "من هو لقمان الحكيم؟", opts: ["نبي مرسل", "رجل صالح آتاه الله الحكمة", "ملك عظيم", "صحابي"], a: 1, hint: "كان عبداً حبشياً آتاه الله الحكمة" }
+      ]
+    },
+    // الدرس الثاني عشر: الزلزلة
+    {
+      title: "سورة الزلزلة (مشهد يوم القيامة)",
+      quiz: [
+        { q: "ماذا تفعل الأرض في يوم القيامة حسب السورة؟", opts: ["تظل ساكنة", "تزلزل وتخرج أثقالها وتحدث أخبارها", "تختفي", "تتحول إلى جنة"], a: 1, hint: "إذا زلزلت الأرض زلزالها وأخرجت الأرض أثقالها" },
+        { q: "ماذا يرى الإنسان يوم القيامة؟", opts: ["الملائكة فقط", "كل شيء حتى وزن الذرة من خير أو شر", "النار فقط", "الجنة فقط"], a: 1, hint: "فمن يعمل مثقال ذرة خيراً يره ومن يعمل مثقال ذرة شراً يره" },
+        { q: "ماذا توحي الأرض في ذلك اليوم؟", opts: ["تنمو الأزهار", "تحدث أخبارها بأمر ربها", "تختفي", "تتحول إلى ماء"], a: 1, hint: "يومئذ تحدث أخبارها بأن ربك أوحى لها" }
+      ]
+    },
+    // الدرس الثالث عشر: الكافرون
+    {
+      title: "سورة الكافرون (إعلان التوحيد)",
+      quiz: [
+        { q: "كم تعدل سورة الكافرون من القرآن؟", opts: ["الثلث", "النصف", "الربع", "الخمس"], a: 2, hint: "قال النبي ﷺ: تعدل ربع القرآن" },
+        { q: "لماذا نزلت هذه السورة؟", opts: ["للهجرة", "لرد عرض المشركين بعبادة آلهتهم سنة مقابل عبادة الله سنة", "للجهاد", "للزواج"], a: 1, hint: "جاءوا يعرضون على النبي ﷺ المفاوضة في الدين" },
+        { q: "ما هو الموقف النهائي في السورة؟", opts: ["نلتقي في المنتصف", "لكم دينكم ولي دين", "أنا كافر", "أنتم مسلمون"], a: 1, hint: "إعلان براءة من شركهم وثبات على التوحيد" }
+      ]
+    }
+  ]
+},
+   // أضف هذا الكائن داخل مصفوفة FORTRESSES (بعد الحصون الموجودة)
+{
+  id: 3,
+  title: "النور المبين (الفقه والأحكام)",
+  emoji: "🕌",
+  color: "#1ABC9C",
+  badge: {
+    icon: "🕌",
+    name: "فقيه المستقبل",
+    desc: "أكملت كراسة النور المبين في الفقه والأحكام"
+  },
+  lessons: [
+    // الدرس 1: الماء والطهارة
+    {
+      title: "الماء والطهارة",
+      quiz: [
+        { q: "ما هو شرط صحة الصلاة؟", opts: ["الطهارة", "الغنى", "القوة", "الجمال"], a: 0, hint: "الطهارة شرط أساسي لصحة الصلاة." },
+        { q: "متى ينجس الماء في الطهارة؟", opts: ["إذا تغير لونه أو طعمه أو ريحه بنجس", "إذا شرب منه أحد", "إذا وضع في إناء", "إذا مر عليه يوم"], a: 0, hint: "الماء يبقى طهوراً ما لم يتغير أحد أوصافه الثلاثة بنجاسة." },
+        { q: "ماذا قال النبي ﷺ عن ماء البحر؟", opts: ["هو طهور ماؤه حِلّ ميتته", "هو نجس", "لا يجوز الوضوء به", "يجب غليه"], a: 0, hint: "روى أبو داود والترمذي أن النبي قال: هو الطهور ماؤه، الحل ميتته." }
+      ]
+    },
+    // الدرس 2: فروض الوضوء
+    {
+      title: "فروض الوضوء العملي",
+      quiz: [
+        { q: "كم عدد فروض الوضوء الأساسية؟", opts: ["3", "5", "7", "10"], a: 2, hint: "تشمل النية، غسل الوجه، اليدين، مسح الرأس، غسل الرجلين، الترتيب، الموالاة." },
+        { q: "ما معنى 'الموالاة' في الوضوء؟", opts: ["قراءة القرآن", "ألا يجف العضو السابق قبل غسل التالي", "الصلاة بعد الوضوء مباشرة", "غسل كل عضو ثلاث مرات"], a: 1, hint: "الموالاة تعني الاستمرارية وعدم التأخير بين الأعضاء حتى لا يجف الأول." },
+        { q: "ما فضل من توضأ كوضوء النبي ﷺ ثم صلى ركعتين بخشوع؟", opts: ["يُعطى مالاً", "تُغفر له ذنوبه السابقة", "يدخل الجنة بلا حساب", "يُشفى من المرض"], a: 1, hint: "روى البخاري: من توضأ نحو وضوئي هذا ثم صلى ركعتين لا يحدث فيهما نفسه غفر له ما تقدم من ذنبه." }
+      ]
+    },
+    // الدرس 3: نواقض الوضوء
+    {
+      title: "نواقض الوضوء",
+      quiz: [
+        { q: "أي من التالي يُعد ناقضاً للوضوء على الصحيح؟", opts: ["أكل لحم الإبل", "أكل لحم البقر", "شرب اللبن", "أكل الخبز"], a: 0, hint: "أكل لحم الإبل ينقض الوضوء عند جمهور العلماء." },
+        { q: "ما هي القاعدة الذهبية في الفقه عند الشك في الوضوء؟", opts: ["أعيد الوضوء دائماً", "اليقين لا يزول بالشك", "أسأل أحداً", "أنتظر حتى أتأكد"], a: 1, hint: "إذا كنت متوضئاً وشككت هل أحدثت أم لا، فأنت على طهارتك." },
+        { q: "ماذا قال الإمام الحسن البصري للرجل الذي كان يوسوس في وضوئه؟", opts: ["أعد الوضوء ثلاثاً", "إن الشيطان اتخذ منك لعبة", "صل في البيت", "لا تصلي"], a: 1, hint: "نصحه بأن يمضي لصلاته ولا يلتفت للوسواس، فالشيطان يريد شغله عن العبادة." }
+      ]
+    },
+    // الدرس 4: أهمية الصلاة
+    {
+      title: "أهمية الصلاة ومكانتها",
+      quiz: [
+        { q: "ما هو أول ما يحاسب عليه العبد يوم القيامة؟", opts: ["الزكاة", "الصيام", "الصلاة", "الحج"], a: 2, hint: "الصلاة هي أول ما يُسأل عنه العبد من الأعمال." },
+        { q: "ماذا قال النبي ﷺ عن تارك الصلاة؟", opts: ["هو فاسق", "فقد كفر", "يعاقب في الدنيا فقط", "هو مسلم عاصٍ"], a: 1, hint: "قال النبي: العهد الذي بيننا وبينهم الصلاة، فمن تركها فقد كفر." },
+        { q: "ما هي آخر وصية أوصى بها النبي ﷺ في مرض موته؟", opts: ["الصدقة", "الصلاة وما ملكت أيمانكم", "الجهاد", "الحج"], a: 1, hint: "كان النبي يغمى عليه ويفيق ويقول: مروا أبا بكر فليصل بالناس، وكان آخر ما أوصى به الصلاة." }
+      ]
+    },
+    // الدرس 5: شروط الصلاة وأركانها
+    {
+      title: "شروط الصلاة وأركانها",
+      quiz: [
+        { q: "كم عدد شروط الصلاة التي يجب توفرها قبل الدخول فيها؟", opts: ["5", "7", "9", "11"], a: 2, hint: "تشمل الإسلام، العقل، التمييز، دخول الوقت، الطهارة، ستر العورة، استقبال القبلة، النية وغيرها." },
+        { q: "ما هو الركن الذي يخل به كثير من المصلين ويبطل صلاتهم؟", opts: ["قراءة الفاتحة", "الطمأنينة", "التشهد", "التسليم"], a: 1, hint: "الطمأنينة تعني السكون التام في الركوع والسجود والاعتدال." },
+        { q: "ماذا قال حذيفة بن اليمان للرجل الذي كان ينقر صلاته منذ 40 سنة؟", opts: ["أحسنت", "ما صليت منذ 40 سنة", "صلاتك مقبولة", "أنت إمام"], a: 1, hint: "قال له: ما صليت منذ أربعين سنة، ولو مت على هذا مت على غير فطرة محمد ﷺ." }
+      ]
+    },
+    // الدرس 6: صفة الصلاة
+    {
+      title: "صفة صلاة النبي ﷺ (مختصرة)",
+      quiz: [
+        { q: "أين يضع المصلي يديه بعد تكبيرة الإحرام؟", opts: ["على جنبيه", "على صدره (اليمنى على اليسرى)", "خلف ظهره", "على رأسه"], a: 1, hint: "من السنة وضع اليمنى على اليسرى على الصدر." },
+        { q: "كم مرة يقول المصلي 'سبحان ربي الأعلى' في سجوده؟", opts: ["مرة واحدة", "ثلاث مرات أو أكثر", "خمس مرات", "عشر مرات"], a: 1, hint: "الأقل ثلاث مرات، ويزيد على حسب الخشوع." },
+        { q: "كيف علّم النبي ﷺ الرجل الذي دخل متأخراً الصلاة الصحيحة عملياً؟", opts: ["أرسل له كتاباً", "طلب من رجل أن يصلي معه ليقتدي به", "صفعه", "أخرجه من المسجد"], a: 1, hint: "قال النبي: ألا رجل يتصدق على هذا فيصلي معه؟ فعلمه القدوة العملية." }
+      ]
+    },
+    // الدرس 7: الجماعة
+    {
+      title: "صلاة الجماعة والمسجد",
+      quiz: [
+        { q: "كم تزيد صلاة الجماعة عن صلاة الفرد من الدرجات؟", opts: ["7 درجات", "27 درجة", "70 درجة", "700 درجة"], a: 1, hint: "قال النبي ﷺ: صلاة الجماعة أفضل من صلاة الفذ بسبع وعشرين درجة." },
+        { q: "ماذا قال النبي ﷺ لعبد الله بن أم مكتوم الأعمى حين طلب رخصة الصلاة في بيته؟", opts: ["لك رخصة", "لا أجد لك رخصة", "صل في المسجد الحرام", "صل حيث شئت"], a: 1, hint: "قال له: هل تسمع الأذان؟ قال نعم. قال: فأجب." },
+        { q: "أين يكون خير صفوف الرجال في الصلاة؟", opts: ["الآخر", "الوسط", "الأول", "على اليمين"], a: 2, hint: "خير صفوف الرجال أولها، وشرها آخرها." }
+      ]
+    },
+    // الدرس 8: الصيام
+    {
+      title: "أحكام الصيام وآدابه",
+      quiz: [
+        { q: "متى يبدأ وقت الصيام في رمضان؟", opts: ["منتصف الليل", "طلوع الفجر الصادق", "شروق الشمس", "الظهر"], a: 1, hint: "الإمساك يكون من طلوع الفجر الصادق إلى غروب الشمس." },
+        { q: "ما هو الهدف الأسمى من مشروعية الصيام؟", opts: ["الشعور بالجوع", "التقوى", "توفير الطعام", "النحافة"], a: 1, hint: "قال تعالى: كُتِبَ عَلَيْكُمُ الصِّيَامُ... لَعَلَّكُمْ تَتَّقُونَ." },
+        { q: "ماذا قال النبي ﷺ للمرأة الحامل والمرضع التي اشتد عليها العطش في رمضان؟", opts: ["اصبري", "أفطري، إن الله تجاوز عنك", "اقضي بعد رمضان", "أطعمي مسكيناً"], a: 1, hint: "قال لها: إن الله تجاوز للمسافر والمرضع والحامل، أفطري." }
+      ]
+    },
+    // الدرس 9: الزكاة والصدقة
+    {
+      title: "مفهوم الزكاة والصدقة",
+      quiz: [
+        { q: "ما هي الصدقة في مفهوم الإسلام الواسع؟", opts: ["إخراج المال فقط", "كل معروف (كلمة طيبة، ابتسامة، إزالة أذى)", "الحج فقط", "الصلاة فقط"], a: 1, hint: "تبسمك في وجه أخيك صدقة، وأمرك بالمعروف صدقة." },
+        { q: "ما معنى الإيثار الذي مدحه الله في كتابه؟", opts: ["أخذ المال من الغير", "تقديم حاجة الغير على النفس ولو كان المحسن محتاجاً", "التصدق بالمال الزائد فقط", "الصلاة بخشوع"], a: 1, hint: "قال تعالى: وَيُؤْثِرُونَ عَلَى أَنْفُسِهِمْ وَلَوْ كَانَ بِهِمْ خَصَاصَةٌ." },
+        { q: "ماذا قال النبي ﷺ عن اتقاء النار؟", opts: ["بالغنى", "ولو بشق تمرة", "بالكثرة فقط", "بالحج"], a: 1, hint: "اتقوا النار ولو بشق تمرة، فمن لم يجد فبكلمة طيبة." }
+      ]
+    },
+    // الدرس 10: الصدق والأمانة
+    {
+      title: "الصدق والأمانة في البيع والشراء",
+      quiz: [
+        { q: "ماذا قال النبي ﷺ عن التاجر الغاش؟", opts: ["هو ذكي", "ليس منا", "يُغفر له", "يُعطى أجراً"], a: 1, hint: "قال النبي: من غشنا فليس منا." },
+        { q: "ماذا فعل النبي ﷺ حين رأى البائع يخفي القمح الفاسد تحت الجيد؟", opts: ["أشتراه", "عابه وقال من غش فليس مني", "سكت", "ضربه"], a: 1, hint: "أدخل يده في الكومة فوجدها مبتلة، فقال: أفلا جعلته فوق الطعام حتى يراه الناس؟" },
+        { q: "كيف يكون الصدق في البيع؟", opts: ["بإخفاء العيوب", "ببيان عيوب السلعة للراغب في الشراء", "بالمبالغة في السعر", "باليمين الكاذبة"], a: 1, hint: "الصدق في المعاملة يوجب البركة، والغش يمحقها." }
+      ]
+    },
+    // الدرس 11: آداب الطعام
+    {
+      title: "آداب الطعام والشراب",
+      quiz: [
+        { q: "ما هي الآداب الثلاثة التي علمها النبي ﷺ لعمر بن أبي سلمة؟", opts: ["التسمية، الأكل باليمين، الأكل مما يليك", "الأكل باليسار، الصمت، النوم", "السرعة، الشبع، العيب", "الأكل واقفاً، الشرب بقوة، الكلام"], a: 0, hint: "قال له: يا غلام، سم الله، وكل بيمينك، وكل مما يليك." },
+        { q: "ماذا يفعل المسلم إذا لم يعجبه الطعام؟", opts: ["يسبه", "يتركه بأدب ولا يعيبه", "يرميه", "يصرخ"], a: 1, hint: "كان النبي ﷺ لا يعيب طعاماً قط، إن اشتهاه أكله وإلا تركه." },
+        { q: "كيف كان النبي ﷺ يعلّم الغلام الصغير الآداب؟", opts: ["بالضرب", "بالإمساك بيده بلطف والقول الحسن", "بالصراخ", "بالإهمال"], a: 1, hint: "أمسك بيده وربت على كتفه وعلمه، فعلق هذا الأسلوب في ذهن الغلام طول العمر." }
+      ]
+    },
+    // الدرس 12: النوم والاستئذان
+    {
+      title: "آداب النوم والاستئذان",
+      quiz: [
+        { q: "على أي شق ينام المسلم اتباعاً للسنة؟", opts: ["الشق الأيسر", "الشق الأيمن", "الظهر", "البطن"], a: 1, hint: "كان النبي ﷺ ينام على شقه الأيمن." },
+        { q: "ماذا يفعل المسلم إذا قيل له 'ارجع' عند الاستئذان؟", opts: ["يدخل غصباً", "يرجع ولا يدخل", "يصرخ", "يكسر الباب"], a: 1, hint: "قال تعالى: وَإِن قِيلَ لَكُمُ ارْجِعُوا فَارْجِعُوا." },
+        { q: "كيف كان عبد الله بن مسعود يستأذن على النبي ﷺ في وقت القيلولة؟", opts: ["يدق الباب بعنف", "يلقي حجراً صغيراً فإن سمع صوتاً دخل وإلا رجع", "يدخل مباشرة", "يرسل رسالة"], a: 1, hint: "كان يتأدب في الاستئذان حتى لا يزعج النبي ﷺ." }
+      ]
+    },
+    // الدرس 13: بر الوالدين
+    {
+      title: "بر الوالدين",
+      quiz: [
+        { q: "ما هي الكبيرة التي تأتي بعد التوحيد في التحريم؟", opts: ["السرقة", "عقوق الوالدين", "الكذب", "الغيبة"], a: 1, hint: "بر الوالدين من أعظم القربات، وعقوقهما من الكبائر الموبقات." },
+        { q: "ما هو أقل لفظ نهى الله عنه للوالدين؟", opts: ["أف", "يا أبي", "لا", "حسناً"], a: 0, hint: "قال تعالى: فَلَا تَقُل لَّهُمَا أُفٍّ وَلَا تَنْهَرْهُمَا." },
+        { q: "ماذا قال النبي ﷺ للرجل الذي يخدم أمه المريضة ويظن أنه وفّى حقها؟", opts: ["أديت حقها", "لا، ولا بزفرة واحدة من زفرات الولادة", "أنت بار", "لك الجنة"], a: 1, hint: "بيّن النبي أن فضل الأم لا يكافأ أبداً مهما فعل الإنسان." }
+      ]
+    },
+    // الدرس 14: حفظ اللسان
+    {
+      title: "حفظ اللسان واجتناب الغيبة",
+      quiz: [
+        { q: "ما هي الغيبة التي حرمها الله؟", opts: ["الكذب على الناس", "ذكر أخاك بما يكره في غيبته", "النميمة فقط", "الكلام في السياسة"], a: 1, hint: "الغيبة هي أن تذكر أخاك بما يكره." },
+        { q: "ما هي النميمة التي ذكر النبي أنها سبب لعذاب القبر؟", opts: ["الكذب", "نقل الكلام بين الناس للإفساد", "الغضب", "الأكل باليسار"], a: 1, hint: "مر النبي بقبرين فقال: أما أحدهما فكان يمشي بالنميمة." },
+        { q: "ماذا قال النبي ﷺ عن كلام الإنسان؟", opts: ["تكلم كثيراً", "ليقل خيراً أو ليصمت", "تكلم بما يضحك الناس", "تحدث عن كل شيء"], a: 1, hint: "من كان يؤمن بالله واليوم الآخر، فليقل خيراً أو ليصمت." }
+      ]
+    },
+    // الدرس 15: الأمر بالمعروف
+    {
+      title: "الأمر بالمعروف والنهي عن المنكر",
+      quiz: [
+        { q: "ما هو أضعف الإيمان في تغيير المنكر؟", opts: ["تغييره باليد", "تغييره باللسان", "إنكاره بالقلب", "السكوت"], a: 2, hint: "قال النبي ﷺ: فإن لم يستطع فبقلبه، وذلك أضعف الإيمان." },
+        { q: "ماذا حدث للرجل في قصة بني إسرائيل الذي ترك القرية ولم يغير المنكر؟", opts: ["نجا", "هلك مع الساكتين لأنه لم يقم بواجب التغيير", "صار ملكاً", "غفر له"], a: 1, hint: "العبرة أن السكوت عن المنكر مع القدرة على تغييره يوجب العقاب." },
+        { q: "كيف يستطيع الشاب الصغير تغيير المنكر؟", opts: ["بالعنف", "بلسانة ونصحه بلطف", "بالإبلاغ عن صاحبه للشرطة", "بمقاطعته"], a: 1, hint: "يبدأ بالوعظ والنصح بالحكمة والموعظة الحسنة." }
+      ]
+    }
+  ]
+},
+// أضف هذا الكائن داخل مصفوفة FORTRESSES (بعد الحصون الموجودة)
+{
+  id: 4,
+  title: "مع الحبيب ﷺ (السيرة النبوية)",
+  emoji: "🌙",
+  color: "#8E44AD",
+  badge: {
+    icon: "🌙",
+    name: "محب النبي",
+    desc: "أكملت كراسة مع الحبيب ﷺ في سيرته العطرة"
+  },
+  lessons: [
+    // الدرس 1: نسبه ومولده
+    {
+      title: "نسبه الشريف ومولده المبارك",
+      quiz: [
+        { q: "في أي عام ولد النبي ﷺ؟", opts: ["عام الفيل", "عام الحزن", "عام الهجرة", "عام أحد"], a: 0, hint: "ولد في مكة عام الفيل." },
+        { q: "من تكفل برعاية النبي ﷺ بعد وفاة جده عبد المطلب؟", opts: ["أبو طالب", "أبو لهب", "الحارث", "العباس"], a: 0, hint: "كفله عمه أبو طالب." },
+        { q: "ماذا قال النبي ﷺ عن اصطفاء الله له في النسب؟", opts: ["اصطفاني من بني هاشم", "اصطفاني من بني أمية", "اصطفاني من بني عدي", "اصطفاني من بني مخزوم"], a: 0, hint: "روى مسلم: اصطفى من قريش بني هاشم، واصطفاني من بني هاشم." }
+      ]
+    },
+    // الدرس 2: طفولته
+    {
+      title: "طفولته ورعاية الله له",
+      quiz: [
+        { q: "من هي مرضعة النبي ﷺ؟", opts: ["حليمة السعدية", "آمنة بنت وهب", "فاطمة بنت أسد", "ثويبة"], a: 0, hint: "أرضعته حليمة السعدية." },
+        { q: "ماذا فعل جبريل في حادثة شق الصدر وهو صغير؟", opts: ["خلق له قلباً جديداً", "استخرج منه علقة (حظ الشيطان)", "غسله بماء النيل", "نقش في قلبه النبوة"], a: 1, hint: "أخرج من قلبه علقة سوداء، ثم غسله بماء زمزم." },
+        { q: "أين كان النبي ﷺ يختلي قبل البعثة؟", opts: ["غار ثور", "غار حراء", "المسجد الحرام", "بيت خديجة"], a: 1, hint: "كان يختلي بغار حراء ليتعبد ويتفكر." }
+      ]
+    },
+    // الدرس 3: نزول الوحي
+    {
+      title: "نزول الوحي وبداية الدعوة",
+      quiz: [
+        { q: "من هو الملك الذي نزل بالوحي على النبي ﷺ؟", opts: ["ميكائيل", "إسرافيل", "جبريل", "ملك الموت"], a: 2, hint: "جبريل عليه السلام هو الموكل بالوحي." },
+        { q: "ما هي أول كلمة نزلت من القرآن؟", opts: ["الحمد", "اقرأ", "يس", "تبارك"], a: 1, hint: "قال جبريل: اقرأ باسم ربك الذي خلق." },
+        { q: "ماذا قالت خديجة للنبي ﷺ عندما رجع خائفاً من غار حراء؟", opts: ["لقد كذبت", "والله لا يخزيك الله أبداً", "دع الدعوة", "اختفِ"], a: 1, hint: "قالت: كلا والله لا يخزيك الله أبداً، إنك لتصل الرحم." }
+      ]
+    },
+    // الدرس 4: الصدع بالدعوة
+    {
+      title: "الصدع بالدعوة وأذى المشركين",
+      quiz: [
+        { q: "على أي جبل صعد النبي ﷺ ليعلن الدعوة جهراً؟", opts: ["أحد", "الصفا", "المروة", "ثور"], a: 1, hint: "صعد على جبل الصفا ونادى: واصباحاه!" },
+        { q: "ماذا قال عمه أبو لهب عندما دعاه النبي؟", opts: ["آمنت", "تباً لك", "نعم القول", "سأتبعك"], a: 1, hint: "قال: تباً لك! ألهذا جمعتنا؟" },
+        { q: "كم سنة حوصر بنو هاشم في الشعب؟", opts: ["سنة", "سنتان", "ثلاث سنوات", "خمس سنوات"], a: 2, hint: "حوصروا في شعب أبي طالب ثلاث سنوات." }
+      ]
+    },
+    // الدرس 5: الإسراء والمعراج
+    {
+      title: "الإسراء والمعراج (الرحلة العظيمة)",
+      quiz: [
+        { q: "من المسجد الحرام إلى أي مسجد أسري بالنبي ﷺ؟", opts: ["المسجد النبوي", "المسجد الأقصى", "مسجد قباء", "مسجد قبة الصخرة"], a: 1, hint: "أسري به من المسجد الحرام إلى المسجد الأقصى." },
+        { q: "ما اسم الدابة التي ركبها النبي ﷺ ليلاً؟", opts: ["البراق", "الرفرف", "المعارج", "الناقة"], a: 0, hint: "ركب البراق." },
+        { q: "ماذا فرض الله على النبي ﷺ في ليلة المعراج؟", opts: ["الصيام", "الصلوات الخمس", "الزكاة", "الحج"], a: 1, hint: "فرضت الصلوات الخمس." }
+      ]
+    },
+    // الدرس 6: الهجرة
+    {
+      title: "الهجرة إلى المدينة (بداية النصر)",
+      quiz: [
+        { q: "من رافق النبي ﷺ في رحلة الهجرة؟", opts: ["عمر بن الخطاب", "أبو بكر الصديق", "علي بن أبي طالب", "عثمان بن عفان"], a: 1, hint: "هاجر مع أبي بكر." },
+        { q: "في أي غار اختبأ النبي ﷺ وأبو بكر؟", opts: ["حراء", "ثور", "أحد", "الخندق"], a: 1, hint: "اختبآ في غار ثور." },
+        { q: "ماذا قال النبي ﷺ لأبي بكر وهو في الغار؟", opts: ["لا تخف", "لا تحزن إن الله معنا", "سيهلكون", "لا تتحرك"], a: 1, hint: "قال له كلمته الخالدة: لا تحزن إن الله معنا." }
+      ]
+    },
+    // الدرس 7: غزوة بدر
+    {
+      title: "غزوة بدر الكبرى (يوم الفرقان)",
+      quiz: [
+        { q: "كم كان عدد المسلمين في غزوة بدر؟", opts: ["200", "314", "500", "1000"], a: 1, hint: "كانوا 314 رجلاً." },
+        { q: "بماذا أمد الله المسلمين في بدر؟", opts: ["بمال وفير", "بملائكة يقاتلون معهم", "بسلاح قوي", "بحلفاء"], a: 1, hint: "أمدهم بالملائكة." },
+        { q: "كيف عامل النبي ﷺ أسرى بدر؟", opts: ["قتلهم جميعاً", "أطلقهم بلا شرط", "أمر بالإحسان إليهم والفداء", "باعهم"], a: 2, hint: "أمر بإحسان الطعام لهم، وجعل الفداء تعليم الصبيان." }
+      ]
+    },
+    // الدرس 8: غزوة أحد
+    {
+      title: "غزوة أحد (درس في الطاعة)",
+      quiz: [
+        { q: "أين وضع النبي ﷺ الرماة في غزوة أحد؟", opts: ["على جبل الخندق", "على جبل الرماة", "في وسط الجيش", "خلف بيوت المدينة"], a: 1, hint: "وضعهم على جبل صغير خلف الجيش." },
+        { q: "ما سبب انهزام المسلمين في أحد؟", opts: ["قلة العدد", "مخالفة الرماة لأمر النبي", "ضعف السلاح", "خيانة المنافقين"], a: 1, hint: "ترك الرماة مواقعهم طمعاً في الغنائم." },
+        { q: "من من الصحابة استشهد في غزوة أحد وكان عم النبي ﷺ؟", opts: ["حمزة", "جعفر", "علي", "العباس"], a: 0, hint: "استشهد حمزة بن عبد المطلب." }
+      ]
+    },
+    // الدرس 9: غزوة الخندق
+    {
+      title: "غزوة الخندق (الأحزاب)",
+      quiz: [
+        { q: "من اقترح حفر الخندق حول المدينة؟", opts: ["سلمان الفارسي", "أبو بكر", "عمر", "خالد بن الوليد"], a: 0, hint: "أشار سلمان الفارسي بحفر الخندق." },
+        { q: "كم مكث الأحزاب محاصرين للمدينة؟", opts: ["أسبوع", "شهر", "شهرين", "ستة أشهر"], a: 1, hint: "حاصروا المدينة شهراً كاملاً." },
+        { q: "بماذا نصر الله المسلمين على الأحزاب؟", opts: ["بالمطر الغزير", "بريح وجنود لم يروها", "بانهيار الأرض", "بمرض الأعداء"], a: 1, hint: "أرسل الله عليهم ريحاً وجنوداً لم يروها." }
+      ]
+    },
+    // الدرس 10: صلح الحديبية
+    {
+      title: "صلح الحديبية (درس في الحكمة)",
+      quiz: [
+        { q: "أين تم صلح الحديبية؟", opts: ["قرب مكة", "في المدينة", "في الطائف", "في الشام"], a: 0, hint: "تم الصلح في منطقة الحديبية قرب مكة." },
+        { q: "كم سنة كانت مدة الهدنة في صلح الحديبية؟", opts: ["5 سنوات", "10 سنوات", "15 سنة", "سنة واحدة"], a: 1, hint: "كانت الهدنة عشر سنوات." },
+        { q: "ما اسم السورة التي نزلت في صلح الحديبية؟", opts: ["النصر", "الفتح", "الإخلاص", "الملك"], a: 1, hint: "سورة الفتح." }
+      ]
+    },
+    // الدرس 11: فتح مكة
+    {
+      title: "فتح مكة (درس في العفو)",
+      quiz: [
+        { q: "كم كان عدد جيش المسلمين في فتح مكة؟", opts: ["5 آلاف", "10 آلاف", "15 ألف", "20 ألف"], a: 1, hint: "كان الجيش عشرة آلاف مقاتل." },
+        { q: "ماذا قال النبي ﷺ لأهل مكة عند فتحها؟", opts: ["اليوم يوم الملحمة", "اذهبوا فأنتم الطلقاء", "اقتلوهم", "أخرجوهم"], a: 1, hint: "قال: اذهبوا فأنتم الطلقاء." },
+        { q: "ماذا فعل النبي ﷺ بالأصنام عند الكعبة؟", opts: ["تركها", "حطمها", "غطاها", "باعها"], a: 1, hint: "جعل يحطمها وهو يتلو: جاء الحق وزهق الباطل." }
+      ]
+    },
+    // الدرس 12: حجة الوداع
+    {
+      title: "حجة الوداع (إكمال الدين)",
+      quiz: [
+        { q: "في أي سنة كانت حجة الوداع؟", opts: ["سنة 8 هـ", "سنة 9 هـ", "سنة 10 هـ", "سنة 11 هـ"], a: 2, hint: "كانت في السنة العاشرة للهجرة." },
+        { q: "ما هي الآية التي نزلت على النبي ﷺ في يوم عرفة؟", opts: ["اليوم أكملت لكم دينكم", "إن الله مع الصابرين", "وأنذر عشيرتك الأقربين", "فاقرأوا ما تيسر"], a: 0, hint: "الْيَوْمَ أَكْمَلْتُ لَكُمْ دِينَكُمْ." },
+        { q: "ما هو الميزان الوحيد للتفاضل بين الناس في خطبة الوداع؟", opts: ["المال", "النسب", "التقوى", "العلم"], a: 2, hint: "قال: لا فضل لعربي على أعجمي إلا بالتقوى." }
+      ]
+    },
+    // الدرس 13: مرضه ووفاته
+    {
+      title: "مرض النبي ووفاته (اللحاق بالرفيق الأعلى)",
+      quiz: [
+        { q: "من كان يؤم الناس في صلاة الجماعة في مرض النبي ﷺ؟", opts: ["عمر", "أبو بكر", "علي", "عثمان"], a: 1, hint: "أمر النبي أبا بكر أن يصلي بالناس." },
+        { q: "في أي يوم توفي النبي ﷺ؟", opts: ["السبت", "الأحد", "الإثنين", "الثلاثاء"], a: 2, hint: "توفي يوم الإثنين." },
+        { q: "من قال: 'من كان يعبد محمداً فإن محمداً قد مات، ومن كان يعبد الله فإن الله حي لا يموت'؟", opts: ["عمر", "أبو بكر", "علي", "عائشة"], a: 1, hint: "أبو بكر الصديق قال هذه الكلمة المشهورة." }
+      ]
+    }
+  ]
+}
+
+];
+
+// ================================================================
+// LOCAL ADMIN: ADD COURSES & LESSONS (only custom)
+// ================================================================
+const ADMIN_CUSTOM_KEY = "husun_custom_courses_v1";
+const BASE_FORTRESS_COUNT = FORTRESSES.length;
+const BASE_RAW_COURSES_COUNT = rawCourses.length;
+
+function adminGetCustomCourses() {
+  try {
+    const data = JSON.parse(localStorage.getItem(ADMIN_CUSTOM_KEY) || "[]");
+    return Array.isArray(data) ? data : [];
+  } catch(e) { return []; }
+}
+function adminSaveCustomCourses(courses) {
+  localStorage.setItem(ADMIN_CUSTOM_KEY, JSON.stringify(courses));
+}
+function adminDefaultQuiz(title) {
+  return [
+    { q:`ما موضوع هذا الدرس؟`, opts:[title,"موضوع آخر","لا أعرف","سؤال عشوائي"], a:0, hint:`موضوع الدرس هو: ${title}` },
+    { q:"ماذا يجب على طالب العلم أولاً؟", opts:["حفظ المعلومات","فهم المعلومات وتطبيقها في الحياة","السماع فقط","قراءة الكتب"], a:1, hint:"طالب العلم يفهم ويطبق المعلومات." },
+    { q:"ما أهمية الاستمرار في طلب العلم؟", opts:["غير مهم للعلم","بناء شخصية متكاملة","غير ضروري","يعيق النجاح"], a:0, hint:"الاستمرار ضروري في طلب العلم." }
+  ];
+}
+function adminNormalizeCourse(course) {
+  const lessons = Array.isArray(course.lessons) ? course.lessons : [];
+  return {
+    id: course.id || ("custom-" + Date.now()),
+    title: String(course.title || "دورة جديدة").trim(),
+    emoji: String(course.emoji || "📖").trim() || "📖",
+    color: course.color || "#2E8B57",
+    badge: course.badge || { icon: String(course.emoji || "📖"), name: "شارة " + String(course.title || "دورة جديدة"), desc: "أكملت هذه الدورة" },
+    lessons: lessons.map(l => ({
+      id: l.id || ("lesson-" + Date.now() + Math.floor(Math.random()*999)),
+      title: String(l.title || "درس جديد").trim(),
+      content: l.content || `<p><strong>الفقرة الأساسية:</strong> ${String(l.title || "درس جديد")}</p>`,
+      quiz: Array.isArray(l.quiz) && l.quiz.length ? l.quiz : adminDefaultQuiz(String(l.title || "درس جديد"))
+    }))
+  };
+}
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+function adminReloadCustomCourses() {
+  FORTRESSES.splice(BASE_FORTRESS_COUNT);
+  rawCourses.splice(BASE_RAW_COURSES_COUNT);
+  adminGetCustomCourses().map(adminNormalizeCourse).forEach(c => {
+    FORTRESSES.push({ id:c.id, title:c.title, emoji:c.emoji, color:c.color, badge:c.badge, lessons:c.lessons.map(l => ({ title:l.title, quiz:l.quiz })) });
+    rawCourses.push({ id:c.id, title:c.title, icon:"fa-book", color:c.color, lessons:c.lessons.map(l => ({ title:l.title, content:l.content })) });
+  });
+}
+function adminParseQuiz(text, title) {
+  const lines = String(text || "").split(/\n+/).map(x => x.trim()).filter(Boolean);
+  const quiz = lines.map(line => {
+    const p = line.split("|").map(x => x.trim());
+    if (p.length < 6) return null;
+    const answer = Math.max(0, Math.min(3, (parseInt(p[5], 10) || 1) - 1));
+    return { q:p[0], opts:p.slice(1,5), a:answer, hint:"راجع الدرس للتعرف على الإجابة الصحيحة." };
+  }).filter(Boolean);
+  return quiz.length ? quiz : adminDefaultQuiz(title);
+}
+function adminShowMessage(id, text, ok=true) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = "admin-message " + (ok ? "ok" : "err");
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => { el.className = "admin-message"; }, 3500);
+}
+function showAdmin() {
+  updateNavActive("nav-admin");
+  adminReloadCustomCourses();
+  adminRender();
+  showScreen("admin");
+}
+function adminRender() {
+  const select = document.getElementById("admin-lesson-course");
+  if (select) {
+    select.innerHTML = FORTRESSES.map((c, i) => `<option value="${i}">${c.emoji || "📖"} ${escapeHtml(c.title)}</option>`).join("");
+  }
+  const custom = adminGetCustomCourses().map(adminNormalizeCourse);
+  const list = document.getElementById("admin-list");
+  if (!list) return;
+  if (!custom.length) {
+    list.innerHTML = `<div class="empty-hint" style="text-align:center;padding:20px;color:rgba(255,255,255,0.4);">لم تُضف أي دورات خاصة بعد.</div>`;
+    return;
+  }
+  list.innerHTML = custom.map((c, ci) => `
+    <div class="admin-course-item">
+      <div class="admin-course-head">
+        <div>
+          <div class="admin-course-title"><span class="admin-emoji">${escapeHtml(c.emoji)}</span><span>${escapeHtml(c.title)}</span></div>
+          <div class="admin-course-meta">${c.lessons.length} درس فيها</div>
+        </div>
+        <button class="admin-small-btn danger" onclick="adminDeleteCourse(${ci})">حذف الدورة</button>
+      </div>
+      ${c.lessons.length ? c.lessons.map((l, li) => `
+        <div class="admin-lesson-row"><span>${li+1}. ${escapeHtml(l.title)}</span><button class="admin-small-btn danger" onclick="adminDeleteLesson(${ci},${li})">حذف</button></div>
+      `).join("") : `<div class="empty-hint" style="font-size:0.8rem;color:rgba(255,255,255,0.4);padding:8px;">لا توجد دروس في هذه الدورة.</div>`}
+    </div>`).join("");
+}
+function adminAddCourse() {
+  const title = document.getElementById("admin-course-title").value.trim();
+  const emoji = document.getElementById("admin-course-emoji").value.trim() || "📖";
+  const color = document.getElementById("admin-course-color").value || "#2E8B57";
+  if (!title) return adminShowMessage("admin-course-msg", "يرجى كتابة عنوان الدورة أولاً.", false);
+  const courses = adminGetCustomCourses();
+  courses.push(adminNormalizeCourse({ id:"custom-" + Date.now(), title, emoji, color, lessons:[] }));
+  adminSaveCustomCourses(courses);
+  adminReloadCustomCourses();
+  adminRender();
+  document.getElementById("admin-course-title").value = "";
+  document.getElementById("admin-course-emoji").value = "";
+  adminShowMessage("admin-course-msg", "✅ تمت إضافة الدورة إلى قائمة الحصون.");
+}
+function adminAddLesson() {
+  const globalIndex = parseInt(document.getElementById("admin-lesson-course").value, 10);
+  const title = document.getElementById("admin-lesson-title").value.trim();
+  const content = document.getElementById("admin-lesson-content").value.trim();
+  const quizText = document.getElementById("admin-lesson-quiz").value;
+  if (!title) return adminShowMessage("admin-lesson-msg", "يرجى كتابة عنوان الدرس أولاً.", false);
+  const baseCount = BASE_FORTRESS_COUNT;
+  if (globalIndex < baseCount) return adminShowMessage("admin-lesson-msg", "يمكنك فقط إضافة دروس للدورات المخصصة، وليس الدورات الأصلية.", false);
+  const customIndex = globalIndex - baseCount;
+  const courses = adminGetCustomCourses().map(adminNormalizeCourse);
+  if (!courses[customIndex]) return adminShowMessage("admin-lesson-msg", "الدورة المختارة غير موجودة.", false);
+  courses[customIndex].lessons.push({
+    id:"lesson-" + Date.now(),
+    title,
+    content: content || `<p><strong>الفقرة الأساسية:</strong> ${escapeHtml(title)}</p><p><strong>الفائدة التربوية:</strong> أضف هنا محتوى الدرس وفوائده التربوية.</p>`,
+    quiz: adminParseQuiz(quizText, title)
+  });
+  adminSaveCustomCourses(courses);
+  adminReloadCustomCourses();
+  adminRender();
+  document.getElementById("admin-lesson-title").value = "";
+  document.getElementById("admin-lesson-content").value = "";
+  document.getElementById("admin-lesson-quiz").value = "";
+  adminShowMessage("admin-lesson-msg", "✅ تمت إضافة الدرس بنجاح إلى الدورة.");
+}
+function adminDeleteCourse(index) {
+  if (!confirm("هل أنت متأكد من حذف هذه الدورة؟")) return;
+  const courses = adminGetCustomCourses();
+  courses.splice(index, 1);
+  adminSaveCustomCourses(courses);
+  adminReloadCustomCourses();
+  adminRender();
+  adminShowMessage("admin-main-msg", "✅ تم حذف الدورة.");
+}
+function adminDeleteLesson(courseIndex, lessonIndex) {
+  if (!confirm("هل أنت متأكد من حذف هذا الدرس؟")) return;
+  const courses = adminGetCustomCourses().map(adminNormalizeCourse);
+  if (!courses[courseIndex]) return;
+  courses[courseIndex].lessons.splice(lessonIndex, 1);
+  adminSaveCustomCourses(courses);
+  adminReloadCustomCourses();
+  adminRender();
+  adminShowMessage("admin-main-msg", "✅ تم حذف الدرس.");
+}
+function adminExportData() {
+  const data = JSON.stringify(adminGetCustomCourses(), null, 2);
+  navigator.clipboard?.writeText(data).then(() => adminShowMessage("admin-main-msg", "✅ تم نسخ JSON إلى الحافظة."))
+    .catch(() => prompt("انسخ بيانات JSON:", data));
+}
+function adminImportData() {
+  const data = prompt("الصق بيانات JSON الخاصة بالدورات المخصصة:");
+  if (!data) return;
+  try {
+    const parsed = JSON.parse(data);
+    if (!Array.isArray(parsed)) throw new Error("not array");
+    adminSaveCustomCourses(parsed.map(adminNormalizeCourse));
+    adminReloadCustomCourses();
+    adminRender();
+    adminShowMessage("admin-main-msg", "✅ تم استيراد البيانات بنجاح.");
+  } catch(e) {
+    adminShowMessage("admin-main-msg", "❌ بيانات JSON غير صحيحة.", false);
+  }
+}
+function adminClearCustomData() {
+  if (!confirm("هل أنت متأكد؟ سيتم حذف كل الدورات المخصصة نهائياً.")) return;
+  adminSaveCustomCourses([]);
+  adminReloadCustomCourses();
+  adminRender();
+  adminShowMessage("admin-main-msg", "✅ تم حذف كل الدورات المخصصة.");
+}
+adminReloadCustomCourses();
+
+// ================================================================
+// GAME ENGINE
+// ================================================================
+const XP_PER_LEVEL = 200;
+const XP_PER_CORRECT = 30;
+const XP_PER_LESSON_COMPLETE = 50;
+const XP_FORTRESS_BONUS = 300;
+const GEMS_PER_LESSON = 2;
+const GEMS_PERFECT_BONUS = 3;
+
+let STATE = {
+  version: GAME_VERSION,
+  playerName: "",
+  avatar: "🦁",
+  age: "12",
+  xp: 0,
+  gems: 0,
+  streak: 0,
+  lastPlayDate: "",
+  level: 1,
+  badgesEarned: [],
+  lessonsCompleted: {},
+  currentFortress: null,
+  currentLessonIndex: null,
+};
+let quizState = { questions:[], current:0, correct:0, timer:null };
+
+// ============================================================
+// STORAGE
+// ============================================================
+function saveState() {
+  try { localStorage.setItem("husun_game_v2", JSON.stringify(STATE)); } catch(e){}
+}
+function loadState() {
+  try {
+    const raw = localStorage.getItem("husun_game_v2");
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null) throw new Error("invalid state");
+    if (typeof parsed.playerName !== "string") throw new Error("missing playerName");
+    if (typeof parsed.xp !== "number") parsed.xp = 0;
+    if (typeof parsed.gems !== "number") parsed.gems = 0;
+    if (typeof parsed.level !== "number" || parsed.level < 1) parsed.level = 1;
+    if (typeof parsed.streak !== "number") parsed.streak = 0;
+    if (!Array.isArray(parsed.badgesEarned)) parsed.badgesEarned = [];
+    if (typeof parsed.lessonsCompleted !== "object" || parsed.lessonsCompleted === null) parsed.lessonsCompleted = {};
+    STATE = { ...STATE, ...parsed };
+    return true;
+  } catch(e) {
+    console.warn("State load failed, resetting:", e);
+    localStorage.removeItem("husun_game_v2");
+    return false;
+  }
+}
+
+// ============================================================
+// SCREEN MANAGER
+// ============================================================
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  const el = document.getElementById("screen-" + id);
+  if (el) el.classList.add("active");
+  if (el) el.scrollTop = 0;
+  const needsHud = ["map","lessons","lesson","quiz","profile","admin"].includes(id);
+  document.getElementById("hud").classList.toggle("visible", needsHud);
+  document.getElementById("bottom-nav").classList.toggle("visible", needsHud);
+  updateHUD();
+}
+
+// ============================================================
+// HUD
+// ============================================================
+function updateHUD() {
+  const xpForLevel = STATE.level * XP_PER_LEVEL;
+  const xpInLevel = STATE.xp - (STATE.level - 1) * XP_PER_LEVEL;
+  const pct = Math.min(100, Math.round((xpInLevel / XP_PER_LEVEL) * 100));
+  document.getElementById("hud-level").textContent = "⭐ مستوى " + STATE.level;
+  document.getElementById("hud-xp-val").textContent = STATE.xp;
+  document.getElementById("hud-xp-bar").style.width = pct + "%";
+  document.getElementById("hud-gems-val").textContent = STATE.gems;
+  document.getElementById("hud-streak-val").textContent = STATE.streak;
+}
+
+// ============================================================
+// STARS & CONFETTI
+// ============================================================
+function makeStars(canvas, total=10) {
+  for (let i=0; i<total; i++) {
+    const s = document.createElement("div");
+    s.className = "star";
+    s.style.cssText = `
+      width:${2+Math.random()*3}px;height:${2+Math.random()*3}px;
+      left:${Math.random()*100}%;top:${Math.random()*100}%;
+      --dur:${2+Math.random()*4}s;--delay:${Math.random()*3}s;
+    `;
+    canvas.appendChild(s);
+  }
+}
+function launchConfetti() {
+  const colors = ["#D4AF37","#F0D060","#27AE60","#3498DB","#E74C3C","#9B59B6","#E67E22"];
+  for (let i=0; i<50; i++) {
+    const c = document.createElement("div");
+    c.className = "confetti-piece";
+    c.style.cssText = `
+      left:${Math.random()*100}vw;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      --dur:${1.5+Math.random()*1.5}s;--delay:${Math.random()*0.8}s;
+      width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;
+      border-radius:${Math.random()>0.5?"50%":"2px"};
+    `;
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 3000);
+  }
+}
+function showFloatText(txt) {
+  const el = document.getElementById("floating-text");
+  el.textContent = txt;
+  el.style.display = "block";
+  setTimeout(() => el.style.display = "none", 1500);
+}
+function showXpPopup(xp, el) {
+  const pop = document.createElement("div");
+  pop.className = "xp-popup";
+  pop.textContent = "+" + xp + " XP";
+  const rect = el ? el.getBoundingClientRect() : { left: window.innerWidth/2, top: window.innerHeight/2 };
+  pop.style.cssText = `left:${rect.left + 20}px;top:${rect.top}px;`;
+  document.body.appendChild(pop);
+  setTimeout(() => pop.remove(), 1600);
+}
+
+// ============================================================
+// STREAK
+// ============================================================
+function updateStreak() {
+  const today = new Date().toDateString();
+  if (STATE.lastPlayDate !== today) {
+    const yesterday = new Date(Date.now()-86400000).toDateString();
+    STATE.streak = STATE.lastPlayDate === yesterday ? STATE.streak + 1 : 1;
+    STATE.lastPlayDate = today;
+  }
+}
+
+// ============================================================
+// WELCOME SCREEN
+// ============================================================
+function chooseAvatar(el) {
+  document.querySelectorAll(".avatar-opt").forEach(a => a.classList.remove("chosen"));
+  el.classList.add("chosen");
+  STATE.avatar = el.dataset.av;
+}
+function chooseAge(el) {
+  document.querySelectorAll(".age-opt").forEach(a => a.classList.remove("chosen"));
+  el.classList.add("chosen");
+  STATE.age = el.dataset.age;
+}
+function startGame() {
+  const name = document.getElementById("player-name").value.trim();
+  if (!name) { 
+    document.getElementById("player-name").style.borderColor = "#E74C3C";
+    setTimeout(() => document.getElementById("player-name").style.borderColor = "", 1500);
+    return;
+  }
+  STATE.playerName = name;
+  saveState();
+  updateStreak();
+  openModal("modal-start");
+}
+
+// ============================================================
+// MAP
+// ============================================================
+function showMap() {
+  updateNavActive("nav-map");
+  renderMap();
+  showScreen("map");
+}
+function renderMap() {
+  document.getElementById("map-greeting").textContent =
+    `أهلاً بك ${STATE.avatar} ${STATE.playerName}! وصلت إلى ${countCompletedLessons()} درس 🎯`;
+  const grid = document.getElementById("map-grid");
+  grid.innerHTML = "";
+  FORTRESSES.forEach((f, fi) => {
+    const prev = fi === 0 ? true : isFortressUnlocked(fi - 1);
+    const unlocked = fi === 0 ? true : prev;
+    const { done, total, pct } = getFortressProgress(fi);
+    const completed = done === total && total > 0;
+    const card = document.createElement("div");
+    card.className = "fortress-card" + (completed ? " completed" : "") + (unlocked ? "" : " locked");
+    if (unlocked) card.onclick = () => showLessons(fi);
+    card.innerHTML = `
+      <span class="chapter-number">الحصن ${fi+1}</span>
+      <div class="fortress-icon-wrap">
+        <span>${f.emoji}</span>
+        ${!unlocked ? '<span class="lock-badge">🔒</span>' : ""}
+      </div>
+      <div class="fortress-info">
+        <div class="fortress-name">${f.title}</div>
+        <div class="fortress-meta">${f.lessons.length} درس ${completed ? "✅" : ""}</div>
+        <div class="fortress-prog-wrap">
+          <div class="fortress-prog-fill" style="width:${pct}%;background:${f.color}"></div>
+        </div>
+        <div class="fortress-pct">${pct}% مكتمل</div>
+      </div>
+      <div class="fortress-badge">${completed ? "🏆" : (unlocked ? "▶️" : "🔒")}</div>
+    `;
+    grid.appendChild(card);
+  });
+}
+function getFortressProgress(fi) {
+  const f = FORTRESSES[fi];
+  let done = 0;
+  f.lessons.forEach((_, li) => {
+    if (STATE.lessonsCompleted[`f${fi}-l${li}`]) done++;
+  });
+  const total = f.lessons.length;
+  return { done, total, pct: total ? Math.round((done/total)*100) : 0 };
+}
+function isFortressUnlocked(fi) {
+  if (fi === 0) return true;
+  const { done, total } = getFortressProgress(fi - 1);
+  return done === total && total > 0;
+}
+function countCompletedLessons() {
+  return Object.keys(STATE.lessonsCompleted).length;
+}
+
+// ============================================================
+// LESSONS LIST
+// ============================================================
+function showLessons(fi) {
+  STATE.currentFortress = fi;
+  const f = FORTRESSES[fi];
+  document.getElementById("lesson-fortress-title").textContent = f.emoji + " " + f.title;
+  const list = document.getElementById("lessons-list");
+  list.innerHTML = "";
+  f.lessons.forEach((lesson, li) => {
+    const key = `f${fi}-l${li}`;
+    const prev = li === 0 ? true : !!STATE.lessonsCompleted[`f${fi}-l${li-1}`];
+    const isDone = !!STATE.lessonsCompleted[key];
+    const isCurrent = !isDone && prev;
+    const isLocked = !isDone && !prev;
+    const row = document.createElement("div");
+    row.className = "lesson-row" + (isDone?" done":"") + (isCurrent?" current":"") + (isLocked?" locked":"");
+    if (!isLocked) row.onclick = () => startLesson(fi, li);
+    const stars = isDone ? (STATE.lessonsCompleted[key].stars || 1) : 0;
+    row.innerHTML = `
+      <div class="lesson-num">${isDone?"✔":(isLocked?"🔒":(li+1))}</div>
+      <div class="lesson-info">
+        <div class="lesson-title-row">${lesson.title}</div>
+        <span class="lesson-xp-tag">✨ ${isDone ? (STATE.lessonsCompleted[key].xp||XP_PER_LESSON_COMPLETE) : XP_PER_LESSON_COMPLETE+"+"} XP
+        ${isDone ? " · " + "⭐".repeat(stars) : ""}</span>
+      </div>
+      <div class="lesson-status-icon">${isDone?"✅":(isCurrent?"▶️":"🔒")}</div>
+    `;
+    list.appendChild(row);
+  });
+  showScreen("lessons");
+}
+
+// ============================================================
+// LESSON READER
+// ============================================================
+function startLesson(fi, li) {
+  STATE.currentFortress = fi;
+  STATE.currentLessonIndex = li;
+  const f = FORTRESSES[fi];
+  const lesson = f.lessons[li];
+  document.getElementById("lesson-reading-title").textContent = lesson.title;
+  document.getElementById("lesson-back-btn").onclick = () => showLessons(fi);
+
+  const rawContent = getRawLessonContent(fi, li);
+  const wrap = document.getElementById("lesson-content-wrap");
+  wrap.innerHTML = renderLessonSections(rawContent, lesson.title) +
+    `<button class="btn-read-done" onclick="startQuiz(${fi},${li})">
+      <i class="fas fa-check-circle"></i> قرأت وفهمت — ابدأ الاختبار!
+    </button>`;
+  showScreen("lesson");
+}
+
+function getRawLessonContent(fi, li) {
+  try {
+    const fortressTitle = FORTRESSES[fi].title;
+    if (rawCourses[fi] && rawCourses[fi].lessons && rawCourses[fi].lessons[li]) {
+      return rawCourses[fi].lessons[li].content || "";
+    }
+    let rc = rawCourses.find(c => c.title === fortressTitle);
+    if (!rc) rc = rawCourses.find(c => c.title && c.title.startsWith(fortressTitle));
+    if (!rc) rc = rawCourses.find(c => fortressTitle && fortressTitle.startsWith(c.title));
+    if (!rc || !rc.lessons[li]) return "";
+    return rc.lessons[li].content || "";
+  } catch(e) {
+    console.warn("getRawLessonContent error:", e);
+    return "";
+  }
+}
+
+function renderLessonSections(html, title) {
+  const sections = [
+    { type:"paragraph", icon:"📌", label:"الفقرة الأساسية", match:"الفقرة الأساسية" },
+    { type:"quote", icon:"📖", label:"الدليل", match:"الدليل" },
+    { type:"explanation", icon:"💡", label:"الشرح المختصر", match:"الشرح المختصر" },
+    { type:"application", icon:"✅", label:"النموذج التطبيقي", match:"النموذج التطبيقي" },
+    { type:"benefit", icon:"🌟", label:"الفائدة التربوية", match:"الفائدة التربوية" },
+    { type:"paragraph", icon:"⚠️", label:"الشبهة", match:"الشبهة" },
+    { type:"quote", icon:"🔍", label:"الرد بالدليل", match:"الرد بالدليل" },
+    { type:"explanation", icon:"💬", label:"الشرح", match:"الشرح المختصر" },
+    { type:"application", icon:"🗣️", label:"كيف ترد؟", match:"النموذج التطبيقي" },
+  ];
+
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html;
+  const rawText = tmp.innerHTML;
+
+  const parts = rawText.split(/<p>|<\/p>/g).filter(p => p.trim());
+  let cards = "";
+  let currentType = "paragraph";
+  let currentLabel = "المحتوى";
+  let currentIcon = "📌";
+  let buffer = [];
+
+  function flushBuffer() {
+    if (!buffer.length) return;
+    const colorMap = {
+      paragraph:"st-paragraph", quote:"st-quote",
+      explanation:"st-explanation", application:"st-application", benefit:"st-benefit"
+    };
+    cards += `
+      <div class="lesson-card-game ${colorMap[currentType]||"st-paragraph"}">
+        <div class="section-header-game">
+          <div class="section-icon-circle">${currentIcon}</div>
+          <span class="section-type-label">${currentLabel}</span>
+        </div>
+        <div class="section-body">${buffer.join("")}</div>
+      </div>`;
+    buffer = [];
+  }
+
+  parts.forEach(part => {
+    const textOnly = part.replace(/<[^>]+>/g,"").trim();
+    let matched = false;
+    for (const sec of sections) {
+      if (textOnly.startsWith(sec.match) || textOnly.includes("<strong>" + sec.match)) {
+        flushBuffer();
+        currentType = sec.type;
+        currentLabel = sec.label;
+        currentIcon = sec.icon;
+        let content = part.replace(/<strong>([^<]+)<\/strong>/g, '<strong style="color:var(--gold)">$1</strong>');
+        content = content.replace(/﴿([^﴾]+)﴾/g, '<div class="quran-text">﴿$1﴾</div>');
+        content = content.replace(/«([^»]+)»/g, '<div class="hadith-text">«$1»<span class="source-tag"></span></div>');
+        buffer.push("<p>" + content + "</p>");
+        matched = true;
+        break;
+      }
+    }
+    if (!matched && part.trim()) {
+      let content = part.replace(/<strong>([^<]+)<\/strong>/g, '<strong style="color:var(--gold)">$1</strong>');
+      content = content.replace(/﴿([^﴾]+)﴾/g, '<div class="quran-text">﴿$1﴾</div>');
+      content = content.replace(/«([^»]+)»/g, '<div class="hadith-text">«$1»</div>');
+      buffer.push("<p>" + content + "</p>");
+    }
+  });
+  flushBuffer();
+  return cards || `<div class="lesson-card-game st-paragraph"><div class="section-body"><p>${html}</p></div></div>`;
+}
+
+// ============================================================
+// QUIZ ENGINE
+// ============================================================
+function startQuiz(fi, li) {
+  const lesson = FORTRESSES[fi].lessons[li];
+  quizState = {
+    questions: [...lesson.quiz],
+    current: 0,
+    correct: 0,
+    fi, li,
+    timer: null
+  };
+  renderQuestion();
+  showScreen("quiz");
+}
+function renderQuestion() {
+  const q = quizState.questions[quizState.current];
+  const total = quizState.questions.length;
+  const pct = ((quizState.current) / total) * 100;
+  document.getElementById("quiz-prog-fill").style.width = pct + "%";
+  document.getElementById("quiz-q-num").textContent = `السؤال ${quizState.current+1} من ${total}`;
+  document.getElementById("quiz-question").textContent = q.q;
+  document.getElementById("quiz-feedback").style.display = "none";
+  document.getElementById("btn-next-q").style.display = "none";
+  const letters = ["أ","ب","ج","د"];
+  const opts = document.getElementById("quiz-options");
+  opts.innerHTML = q.opts.map((opt,i) => `
+    <button class="quiz-opt" onclick="answerQ(${i})" id="opt-${i}">
+      <div class="opt-circle">${letters[i]}</div>
+      ${opt}
+    </button>
+  `).join("");
+  clearInterval(quizState.timer);
+  let t = 20;
+  const timerEl = document.getElementById("quiz-timer");
+  timerEl.classList.remove("urgent");
+  timerEl.textContent = "⏱ " + t;
+  quizState.timer = setInterval(() => {
+    t--;
+    timerEl.textContent = "⏱ " + t;
+    if (t <= 5) timerEl.classList.add("urgent");
+    if (t <= 0) {
+      clearInterval(quizState.timer);
+      answerQ(-1);
+    }
+  }, 1000);
+}
+function answerQ(chosen) {
+  clearInterval(quizState.timer);
+  const q = quizState.questions[quizState.current];
+  const correct = q.a;
+  const isCorrect = chosen === correct;
+  document.querySelectorAll(".quiz-opt").forEach(b => b.disabled = true);
+  const btns = document.querySelectorAll(".quiz-opt");
+  if (btns[correct]) btns[correct].classList.add("correct");
+  if (chosen >= 0 && chosen !== correct && btns[chosen]) btns[chosen].classList.add("wrong");
+  const fb = document.getElementById("quiz-feedback");
+  if (isCorrect) {
+    quizState.correct++;
+    fb.className = "quiz-feedback correct-fb";
+    fb.innerHTML = "✅ " + ["ممتاز! أجبت بشكل صحيح 🌟","رائع جداً! إجابة صحيحة 🎉","أحسنت! هذا هو الجواب الصحيح 🏆","بطل! إجابتك صحيحة 💪","نجحت! أنت تعرف هذا جيداً ⭐"][Math.floor(Math.random()*5)];
+    STATE.xp += XP_PER_CORRECT;
+    showXpPopup(XP_PER_CORRECT, btns[correct]);
+    checkLevelUp();
+  } else {
+    fb.className = "quiz-feedback wrong-fb";
+    const hintText = q.hint ? `<br><span style="color:rgba(255,255,255,0.7);font-size:0.88rem;">💡 ${q.hint}</span>` : "";
+    if (chosen === -1) {
+      fb.innerHTML = "⏱ انتهى الوقت!" + hintText;
+    } else {
+      fb.innerHTML = "❌ إجابة خاطئة — حاول أن تتذكر في المرة القادمة!" + hintText;
+    }
+  }
+  fb.style.display = "block";
+  const nextBtn = document.getElementById("btn-next-q");
+  const isLast = quizState.current === quizState.questions.length - 1;
+  document.getElementById("next-q-label").textContent = isLast ? "انظر نتيجتك!" : "السؤال التالي";
+  nextBtn.style.display = "flex";
+}
+function nextQuestion() {
+  quizState.current++;
+  if (quizState.current < quizState.questions.length) {
+    renderQuestion();
+  } else {
+    finishQuiz();
+  }
+}
+function finishQuiz() {
+  clearInterval(quizState.timer);
+  const { fi, li, correct, questions } = quizState;
+  const total = questions.length;
+  const stars = correct === total ? 3 : correct >= Math.ceil(total*0.6) ? 2 : 1;
+  const xpEarned = XP_PER_LESSON_COMPLETE + (correct * XP_PER_CORRECT);
+  const gemsEarned = GEMS_PER_LESSON + (correct === total ? GEMS_PERFECT_BONUS : 0);
+  STATE.xp += xpEarned;
+  STATE.gems += gemsEarned;
+  checkLevelUp();
+  const key = `f${fi}-l${li}`;
+  const isFirstTime = !STATE.lessonsCompleted[key];
+  if (isFirstTime || (STATE.lessonsCompleted[key].stars < stars)) {
+    STATE.lessonsCompleted[key] = { stars, correct, total, xp: xpEarned };
+  }
+  updateStreak();
+  saveState();
+  showResult(fi, li, stars, correct, total, xpEarned, gemsEarned, isFirstTime);
+}
+function showResult(fi, li, stars, correct, total, xp, gems, isFirst) {
+  const msgs = [
+    ["واصل التقدم! 💪", "أكملت الدرس، راجع الإجابات واستمر"],
+    ["جيد جداً! 🌟", "أداء ممتاز، واصل مسيرتك"],
+    ["مثالي! 🏆🎉", "درجة كاملة — أنت نجم حصون الإيمان!"]
+  ];
+  document.getElementById("result-emoji").textContent = ["😊","🌟","🏆"][stars-1];
+  document.getElementById("result-title").textContent = msgs[stars-1][0];
+  document.getElementById("result-subtitle").textContent = msgs[stars-1][1];
+  document.getElementById("res-xp").textContent = "+" + xp;
+  document.getElementById("res-correct").textContent = correct + "/" + total;
+  document.getElementById("res-gems").textContent = "+" + gems;
+  const starsRow = document.getElementById("result-stars");
+  starsRow.innerHTML = [1,2,3].map(s => `<span class="star-item">${s<=stars?"⭐":"☆"}</span>`).join("");
+  const { done, total: ftotal } = getFortressProgress(fi);
+  const badge = document.getElementById("result-badge");
+  if (done === ftotal) {
+    badge.style.display = "flex";
+    badge.innerHTML = `🏆 أكملت حصن "${FORTRESSES[fi].title}"!`;
+  } else {
+    badge.style.display = "none";
+  }
+  const nextBtn = document.getElementById("btn-result-next");
+  const nextLi = li + 1;
+  if (nextLi < FORTRESSES[fi].lessons.length) {
+    nextBtn.style.display = "flex";
+    nextBtn.textContent = "▶ الدرس التالي";
+    nextBtn.onclick = () => startLesson(fi, nextLi);
+  } else {
+    nextBtn.style.display = "flex";
+    nextBtn.innerHTML = "🏆 احتفالية الحصن!";
+    nextBtn.onclick = () => showFortressWin(fi);
+  }
+  if (stars === 3) launchConfetti();
+  showScreen("result");
+}
+function goNextLesson() {
+  const fi = quizState.fi;
+  const li = quizState.li;
+  if (fi === undefined || li === undefined) { showMap(); return; }
+  const nextLi = li + 1;
+  if (nextLi < FORTRESSES[fi].lessons.length) {
+    startLesson(fi, nextLi);
+  } else {
+    showFortressWin(fi);
+  }
+}
+function showFortressWin(fi) {
+  const f = FORTRESSES[fi];
+  document.getElementById("fw-icon").textContent = f.emoji;
+  document.getElementById("fw-title").textContent = "🎉 أكملت " + f.title + "!";
+  document.getElementById("fw-sub").textContent = "أنت فارس حقيقي — حصن جديد بُني!";
+  document.getElementById("fw-badge-icon").textContent = f.badge.icon;
+  document.getElementById("fw-badge-name").textContent = f.badge.name;
+  document.getElementById("fw-badge-desc").textContent = f.badge.desc;
+  STATE.xp += XP_FORTRESS_BONUS;
+  STATE.gems += 20;
+  document.getElementById("fw-xp").textContent = "+" + XP_FORTRESS_BONUS;
+  document.getElementById("fw-gems").textContent = "+20";
+  if (!STATE.badgesEarned.includes(f.badge.name)) {
+    STATE.badgesEarned.push(f.badge.name);
+  }
+  checkLevelUp();
+  saveState();
+  launchConfetti();
+  showFloatText("🏆 مبروك!");
+  showScreen("fortress-win");
+}
+
+// ============================================================
+// LEVEL UP
+// ============================================================
+function checkLevelUp() {
+  const newLevel = Math.floor(STATE.xp / XP_PER_LEVEL) + 1;
+  if (newLevel > STATE.level) {
+    STATE.level = newLevel;
+    openModal("modal-levelup");
+    document.getElementById("levelup-title").textContent = "🎉 مستوى " + STATE.level + "!";
+    document.getElementById("levelup-desc").textContent = "أنت الآن في المستوى " + STATE.level + "! تابع، الأبطال لا يتوقفون!";
+    launchConfetti();
+    saveState();
+  }
+  updateHUD();
+}
+
+// ============================================================
+// PROFILE
+// ============================================================
+function showProfile() {
+  updateNavActive("nav-profile");
+  const wrap = document.getElementById("profile-wrap");
+  const xpForLevel = STATE.level * XP_PER_LEVEL;
+  const xpInLevel = STATE.xp - (STATE.level - 1) * XP_PER_LEVEL;
+  const pct = Math.min(100, Math.round((xpInLevel / XP_PER_LEVEL) * 100));
+  const allBadges = FORTRESSES.map(f => f.badge);
+  wrap.innerHTML = `
+    <div class="profile-hero">
+      <div class="profile-avatar">${STATE.avatar}</div>
+      <div class="profile-name">${STATE.playerName}</div>
+      <div class="profile-level-tag">⭐ المستوى ${STATE.level}</div>
+      <div class="profile-xp-bar-wrap">
+        <div class="profile-xp-bar-fill" style="width:${pct}%"></div>
+      </div>
+      <div class="profile-xp-label">${xpInLevel} / ${XP_PER_LEVEL} XP للمستوى التالي</div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="s-icon">✨</div><div class="s-val">${STATE.xp}</div><div class="s-lbl">إجمالي XP</div></div>
+      <div class="stat-card"><div class="s-icon">💎</div><div class="s-val">${STATE.gems}</div><div class="s-lbl">جواهر</div></div>
+      <div class="stat-card"><div class="s-icon">🔥</div><div class="s-val">${STATE.streak}</div><div class="s-lbl">أيام متتالية</div></div>
+      <div class="stat-card"><div class="s-icon">📚</div><div class="s-val">${countCompletedLessons()}</div><div class="s-lbl">دروس مكتملة</div></div>
+    </div>
+    <div class="badges-section">
+      <h3>🏅 شاراتي</h3>
+      <div class="badges-grid">
+        ${allBadges.map(b => {
+          const earned = STATE.badgesEarned.includes(b.name);
+          return `<div class="badge-cell ${earned?"":"locked-badge"}">
+            <div class="b-icon">${b.icon}</div>
+            <div class="b-name">${b.name}</div>
+          </div>`;
+        }).join("")}
+      </div>
+    </div>
+    <div style="margin-top:20px;text-align:center;">
+      <div style="font-size:0.75rem;color:rgba(212,175,55,0.6);margin-bottom:8px;">تأليف المادة العلمية</div>
+      <div style="font-size:0.95rem;color:var(--gold);font-weight:700;">محمد أبو عبد الرحمن — عفا الله عنه</div>
+    </div>
+  `;
+  showScreen("profile");
+}
+
+// ============================================================
+// NAV & MODAL
+// ============================================================
+function updateNavActive(active) {
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+  const el = document.getElementById(active);
+  if (el) el.classList.add("active");
+}
+function openModal(id) {
+  document.getElementById(id).classList.add("open");
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove("open");
+}
+
+// ============================================================
+// INIT
+// ============================================================
+window.onload = function() {
+  makeStars(document.getElementById("starfield"), 60);
+  const loaded = loadState();
+  if (loaded && STATE.playerName) {
+    updateStreak();
+    showMap();
+  } else {
+    showScreen("welcome");
+    const firstAv = document.querySelector(".avatar-opt");
+    if (firstAv) firstAv.classList.add("chosen");
+    const firstAge = document.querySelector('[data-age="12"]');
+    if (firstAge) firstAge.classList.add("chosen");
+  }
+};
+
+// ================================================================
+// PWA Service Worker
+// ================================================================
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js").catch(()=>{});
+}
+
+// ================================================================
+// 🔊 HUSUN SOUND ENGINE — Web Audio API
+// ================================================================
+const HusunSound = (() => {
+  let ctx = null;
+  let unlocked = false;
+  let masterGain = null;
+
+  function init() {
+    if (ctx) return;
+    try {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = ctx.createGain();
+      masterGain.gain.setValueAtTime(0.7, ctx.currentTime);
+      masterGain.connect(ctx.destination);
+      unlocked = true;
+    } catch(e) {
+      console.warn("Web Audio API not supported:", e);
+      unlocked = false;
+    }
+  }
+
+  function osc(type, freq, start, dur, gainVal, gainEnd, dest) {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, start);
+    g.gain.setValueAtTime(gainVal, start);
+    g.gain.exponentialRampToValueAtTime(gainEnd || 0.001, start + dur);
+    o.connect(g);
+    g.connect(dest || masterGain);
+    o.start(start);
+    o.stop(start + dur + 0.05);
+    return { osc: o, gain: g };
+  }
+
+  function slide(o, fromFreq, toFreq, start, dur) {
+    o.frequency.setValueAtTime(fromFreq, start);
+    o.frequency.exponentialRampToValueAtTime(toFreq, start + dur);
+  }
+
+  let _noiseBuffer = null;
+  function getNoiseBuffer() {
+    if (_noiseBuffer && _noiseBuffer.sampleRate === ctx.sampleRate) return _noiseBuffer;
+    const size = ctx.sampleRate * 2;
+    _noiseBuffer = ctx.createBuffer(1, size, ctx.sampleRate);
+    const data = _noiseBuffer.getChannelData(0);
+    for (let i = 0; i < size; i++) data[i] = Math.random() * 2 - 1;
+    return _noiseBuffer;
+  }
+  function whiteNoise(start, dur, gainVal, gainEnd, filterFreq) {
+    const buffer = getNoiseBuffer();
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(filterFreq || 1200, start);
+    filter.Q.setValueAtTime(0.8, start);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(gainVal, start);
+    g.gain.exponentialRampToValueAtTime(gainEnd || 0.001, start + dur);
+    src.connect(filter);
+    filter.connect(g);
+    g.connect(masterGain);
+    src.start(start);
+    src.stop(start + dur + 0.1);
+    return src;
+  }
+
+  let correctCount = 0;
+  let wrongCount = 0;
+  let welcomeVariant = 0;
+
+  function playCorrect() {
+    if (!unlocked) return;
+    correctCount++;
+    const variant = correctCount % 4;
+    const t = ctx.currentTime + 0.02;
+
+    if (variant === 0) {
+      for (let i = 0; i < 6; i++) {
+        whiteNoise(t + i * 0.08, 0.06, 0.3 + Math.random() * 0.2, 0.001, 800 + Math.random() * 400);
+      }
+      setTimeout(() => {
+        const t2 = ctx.currentTime;
+        const n1 = osc("sine", 523, t2, 0.15, 0.3, 0.001);
+        const n2 = osc("sine", 659, t2 + 0.12, 0.18, 0.3, 0.001);
+        const n3 = osc("sine", 784, t2 + 0.26, 0.25, 0.35, 0.001);
+      }, 400);
+    } else if (variant === 1) {
+      for (let i = 0; i < 8; i++) {
+        const delay = i * 0.065 + Math.random() * 0.02;
+        whiteNoise(t + delay, 0.055, 0.4, 0.001, 700 + Math.random() * 600);
+      }
+      setTimeout(() => {
+        const t2 = ctx.currentTime;
+        const up = osc("sine", 400, t2, 0.4, 0.25, 0.001);
+        slide(up.osc, 400, 880, t2, 0.35);
+      }, 500);
+    } else if (variant === 2) {
+      for (let i = 0; i < 5; i++) {
+        const n = osc("square", 180 + Math.random() * 40, t + i * 0.07, 0.04, 0.25, 0.001);
+      }
+      setTimeout(() => {
+        const t2 = ctx.currentTime;
+        osc("sine", 660, t2, 0.12, 0.28, 0.001);
+        osc("sine", 880, t2 + 0.14, 0.18, 0.3, 0.001);
+        osc("sine", 1047, t2 + 0.3, 0.22, 0.28, 0.001);
+      }, 380);
+    } else {
+      for (let i = 0; i < 10; i++) {
+        const delay = i * 0.07 + Math.random() * 0.025;
+        const freq = 600 + Math.random() * 800;
+        whiteNoise(t + delay, 0.065, 0.25 + Math.random() * 0.2, 0.001, freq);
+      }
+      setTimeout(() => {
+        const t2 = ctx.currentTime;
+        osc("sine", 523, t2, 0.1, 0.2, 0.001);
+        osc("sine", 659, t2 + 0.08, 0.1, 0.22, 0.001);
+        osc("sine", 784, t2 + 0.17, 0.1, 0.25, 0.001);
+        osc("sine", 1047, t2 + 0.28, 0.3, 0.3, 0.001);
+      }, 650);
+    }
+  }
+
+  function playWrong() {
+    if (!unlocked) return;
+    wrongCount++;
+    const variant = wrongCount % 3;
+    const t = ctx.currentTime + 0.02;
+
+    if (variant === 0) {
+      const o1 = osc("sine", 320, t, 0.35, 0.28, 0.001);
+      slide(o1.osc, 320, 160, t, 0.32);
+      setTimeout(() => {
+        const t2 = ctx.currentTime;
+        const o2 = osc("sine", 200, t2, 0.25, 0.22, 0.001);
+        slide(o2.osc, 200, 100, t2, 0.28);
+      }, 280);
+    } else if (variant === 1) {
+      const o = osc("triangle", 280, t, 0.5, 0.32, 0.001);
+      slide(o.osc, 280, 130, t, 0.45);
+      whiteNoise(t, 0.15, 0.08, 0.001, 300);
+    } else {
+      const o1 = osc("sine", 350, t, 0.2, 0.3, 0.001);
+      slide(o1.osc, 350, 200, t, 0.18);
+      const o2 = osc("sine", 250, t + 0.22, 0.3, 0.28, 0.001);
+      slide(o2.osc, 250, 120, t + 0.22, 0.27);
+    }
+  }
+
+  function playTimeout() {
+    if (!unlocked) return;
+    const t = ctx.currentTime + 0.02;
+    for (let i = 0; i < 3; i++) {
+      const o = osc("square", 440, t + i * 0.18, 0.12, 0.18, 0.001);
+      o.gain.gain.setValueAtTime(0.18, t + i * 0.18);
+      o.gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.18 + 0.12);
+    }
+    setTimeout(() => {
+      const t2 = ctx.currentTime;
+      const o = osc("sine", 220, t2, 0.35, 0.25, 0.001);
+      slide(o.osc, 220, 100, t2, 0.32);
+    }, 580);
+  }
+
+  function playWelcome() {
+    if (!unlocked) return;
+    welcomeVariant = (welcomeVariant + 1) % 3;
+    const t = ctx.currentTime + 0.05;
+
+    if (welcomeVariant === 0) {
+      const notes = [523, 659, 784, 1047];
+      notes.forEach((freq, i) => {
+        osc("sine", freq, t + i * 0.13, 0.35, 0.22, 0.001);
+      });
+    } else if (welcomeVariant === 1) {
+      whiteNoise(t, 0.25, 0.12, 0.001, 2000);
+      const o = osc("sine", 440, t + 0.1, 0.55, 0.28, 0.001);
+      slide(o.osc, 440, 880, t + 0.1, 0.4);
+    } else {
+      for (let i = 0; i < 3; i++) {
+        osc("triangle", 300 + i * 80, t + i * 0.1, 0.08, 0.2, 0.001);
+      }
+      osc("sine", 784, t + 0.32, 0.35, 0.3, 0.001);
+    }
+  }
+
+  function playFortressWin() {
+    if (!unlocked) return;
+    const t = ctx.currentTime + 0.05;
+    for (let i = 0; i < 16; i++) {
+      const delay = i * 0.06 + Math.random() * 0.03;
+      whiteNoise(t + delay, 0.07, 0.3 + Math.random() * 0.25, 0.001, 600 + Math.random() * 1000);
+    }
+    const fanfare = [523, 659, 784, 659, 784, 1047];
+    fanfare.forEach((freq, i) => {
+      osc("sine", freq, t + 0.8 + i * 0.12, 0.2, 0.3, 0.001);
+    });
+    setTimeout(() => {
+      const t2 = ctx.currentTime;
+      for (let i = 0; i < 4; i++) {
+        const drum = osc("sine", 80, t2 + i * 0.22, 0.18, 0.35, 0.001);
+        slide(drum.osc, 80, 40, t2 + i * 0.22, 0.15);
+        whiteNoise(t2 + i * 0.22, 0.05, 0.2, 0.001, 2000);
+      }
+    }, 700);
+  }
+
+  function playLevelUp() {
+    if (!unlocked) return;
+    const t = ctx.currentTime + 0.05;
+    const notes = [392, 494, 587, 740, 880, 1175];
+    notes.forEach((freq, i) => {
+      const o = osc("sine", freq, t + i * 0.1, 0.22, 0.28, 0.001);
+      osc("sine", freq * 2, t + i * 0.1, 0.12, 0.08, 0.001);
+    });
+    setTimeout(() => {
+      for (let i = 0; i < 5; i++) {
+        whiteNoise(ctx.currentTime + i * 0.07, 0.055, 0.2, 0.001, 900 + Math.random() * 400);
+      }
+    }, 700);
+  }
+
+  function playPerfect() {
+    if (!unlocked) return;
+    playFortressWin();
+    setTimeout(() => {
+      const t = ctx.currentTime;
+      for (let i = 0; i < 3; i++) {
+        osc("sine", [784, 1047, 1318][i], t + i * 0.15, 0.4, 0.32, 0.001);
+      }
+    }, 1200);
+  }
+
+  function playStartLesson() {
+    if (!unlocked) return;
+    const t = ctx.currentTime + 0.05;
+    osc("sine", 392, t, 0.15, 0.18, 0.001);
+    osc("sine", 494, t + 0.12, 0.15, 0.2, 0.001);
+    osc("sine", 587, t + 0.25, 0.2, 0.22, 0.001);
+    whiteNoise(t, 0.08, 0.05, 0.001, 3000);
+  }
+
+  function playNewQuestion() {
+    if (!unlocked) return;
+    const t = ctx.currentTime + 0.02;
+    osc("sine", 660, t, 0.08, 0.12, 0.001);
+    osc("sine", 880, t + 0.06, 0.07, 0.1, 0.001);
+  }
+
+  function playTimerUrgent() {
+    if (!unlocked) return;
+    const t = ctx.currentTime + 0.02;
+    const o = osc("square", 880, t, 0.06, 0.12, 0.001);
+    o.gain.gain.setValueAtTime(0.12, t);
+    o.gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+  }
+
+  function playUnlock() {
+    if (!unlocked) return;
+    const t = ctx.currentTime + 0.05;
+    const o = osc("triangle", 1200, t, 0.12, 0.2, 0.001);
+    slide(o.osc, 1200, 600, t, 0.1);
+    setTimeout(() => {
+      const t2 = ctx.currentTime;
+      osc("sine", 523, t2, 0.12, 0.18, 0.001);
+      osc("sine", 659, t2 + 0.1, 0.12, 0.2, 0.001);
+      osc("sine", 784, t2 + 0.2, 0.18, 0.22, 0.001);
+    }, 250);
+  }
+
+  function playQuizStart() {
+    if (!unlocked) return;
+    const t = ctx.currentTime + 0.05;
+    whiteNoise(t, 0.15, 0.1, 0.001, 1500);
+    osc("sine", 440, t + 0.1, 0.2, 0.22, 0.001);
+    osc("sine", 587, t + 0.24, 0.18, 0.22, 0.001);
+    osc("sine", 440, t + 0.4, 0.25, 0.28, 0.001);
+  }
+
+  function playTap() {
+    if (!unlocked) return;
+    const t = ctx.currentTime + 0.01;
+    osc("sine", 800, t, 0.04, 0.1, 0.001);
+  }
+
+  function playBack() {
+    if (!unlocked) return;
+    const t = ctx.currentTime + 0.02;
+    osc("sine", 523, t, 0.06, 0.12, 0.001);
+    osc("sine", 440, t + 0.08, 0.05, 0.1, 0.001);
+  }
+
+  return {
+    init,
+    correct: playCorrect,
+    wrong: playWrong,
+    timeout: playTimeout,
+    welcome: playWelcome,
+    fortressWin: playFortressWin,
+    levelUp: playLevelUp,
+    perfect: playPerfect,
+    startLesson: playStartLesson,
+    newQuestion: playNewQuestion,
+    timerUrgent: playTimerUrgent,
+    unlock: playUnlock,
+    quizStart: playQuizStart,
+    tap: playTap,
+    back: playBack
+  };
+})();
+
+document.addEventListener("click", () => HusunSound.init(), { once: true });
+document.addEventListener("touchstart", () => HusunSound.init(), { once: true });
+
+const _origShowScreen    = showScreen;
+const _origAnswerQ       = answerQ;
+const _origStartLesson   = startLesson;
+const _origStartQuiz     = startQuiz;
+const _origRenderQuestion= renderQuestion;
+const _origCheckLevelUp  = checkLevelUp;
+const _origShowResult    = showResult;
+const _origShowFortWin   = showFortressWin;
+const _origStartGame     = startGame;
+const _origShowLessons   = showLessons;
+
+showScreen = function(id) {
+  _origShowScreen(id);
+  if (id === "welcome") {
+    setTimeout(() => HusunSound.welcome(), 400);
+  } else if (id === "quiz") {
+    setTimeout(() => HusunSound.quizStart(), 200);
+  } else if (id === "lesson") {
+    setTimeout(() => HusunSound.startLesson(), 200);
+  }
+};
+
+answerQ = function(chosen) {
+  _origAnswerQ(chosen);
+  const q = quizState.questions[quizState.current];
+  if (q) {
+    const correct = q.a;
+    if (chosen === -1) {
+      HusunSound.timeout();
+    } else if (chosen === correct) {
+      HusunSound.correct();
+    } else {
+      HusunSound.wrong();
+    }
+  }
+};
+
+startLesson = function(fi, li) {
+  _origStartLesson(fi, li);
+  HusunSound.startLesson();
+};
+
+renderQuestion = function() {
+  _origRenderQuestion();
+  setTimeout(() => HusunSound.newQuestion(), 300);
+};
+
+checkLevelUp = function() {
+  const prevLevel = STATE.level;
+  _origCheckLevelUp();
+  if (STATE.level > prevLevel) {
+    setTimeout(() => HusunSound.levelUp(), 400);
+  }
+};
+
+showResult = function(fi, li, stars, correct, total, xp, gems, isFirst) {
+  _origShowResult(fi, li, stars, correct, total, xp, gems, isFirst);
+  setTimeout(() => {
+    if (stars === 3) {
+      HusunSound.perfect();
+    } else if (stars === 2) {
+      HusunSound.correct();
+    } else {
+      HusunSound.wrong();
+    }
+  }, 500);
+};
+
+showFortressWin = function(fi) {
+  _origShowFortWin(fi);
+  setTimeout(() => HusunSound.fortressWin(), 300);
+};
+
+startGame = function() {
+  HusunSound.init();
+  _origStartGame();
+  setTimeout(() => HusunSound.welcome(), 600);
+};
+
+showLessons = function(fi) {
+  _origShowLessons(fi);
+  HusunSound.tap();
+};
+
+(function patchQuizTimer() {
+  const observer = new MutationObserver(() => {
+    const timerEl = document.getElementById("quiz-timer");
+    if (timerEl && timerEl.classList.contains("urgent")) {
+      if (!timerEl._soundPlaying) {
+        timerEl._soundPlaying = true;
+        HusunSound.timerUrgent();
+        setTimeout(() => { if(timerEl) timerEl._soundPlaying = false; }, 950);
+      }
+    }
+  });
+  const startObserving = () => {
+    const timerEl = document.getElementById("quiz-timer");
+    if (timerEl) {
+      observer.observe(timerEl, { childList: true, subtree: true, characterData: true });
+    }
+  };
+  document.addEventListener("DOMContentLoaded", startObserving);
+  setTimeout(startObserving, 1000);
+})();
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll(".btn-back-game").forEach(btn => {
+    btn.addEventListener("click", () => HusunSound.back());
+  });
+});
+
+(function watchModalStart() {
+  const btn = document.getElementById("btn-start-adventure");
+  if (btn) {
+    btn.addEventListener("click", () => {
+      HusunSound.init();
+      setTimeout(() => HusunSound.welcome(), 200);
+    });
+  } else {
+    setTimeout(watchModalStart, 500);
+  }
+})();
+</script>
+</body>
+</html>

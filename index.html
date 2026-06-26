@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>2026 حصون الإيمان - المنهج الصيفي المتكامل</title>
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#D4AF37" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="حصون الإيمان" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="120x120" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png" />
+    <meta name="description" content="المنهج الصيفي المتكامل لبناء شخصية ابنك المسلمة - 10 كراسات - 130 درساً - للفئة 9-16 سنة" />
+    <meta name="application-name" content="حصون الإيمان" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ===== شاشة البداية ===== -->
+<div id="splashScreen">
+    <div class="splash-icon"><i class="fas fa-shield-alt"></i></div>
+    <h1>حصون الإيمان</h1>
+    <p>المنهج الصيفي المتكامل</p>
+    <p style="font-size:0.78rem;color:rgba(212,175,55,0.7);margin-top:6px;">تأليف: محمد أبو عبد الرحمن — عفا الله عنه</p>
+    <div class="splash-loader"></div>
+</div>
+
+<!-- ===== شريط تقدم علوي ===== -->
+<div id="topProgressBar"></div>
+
+<!-- ===== بانر تثبيت التطبيق ===== -->
+<div id="installBanner">
+    <div class="install-icon">📲</div>
+    <div class="install-text">
+        <strong>ثبّت التطبيق</strong>
+        <span>يعمل بدون إنترنت على جهازك</span>
+    </div>
+    <div class="install-btns">
+        <button class="btn-install" id="btnInstall">تثبيت</button>
+        <button class="btn-dismiss" id="btnDismiss">✕</button>
+    </div>
+</div>
+
+<!-- ================================================================
+     نافذة الترحيب والإعداد — Welcome & Setup Modal
+     ================================================================ -->
+<div id="welcomeOverlay" style="display:none;">
+    <div id="welcomeCard">
+
+        <!-- الرأس -->
+        <div class="wc-header">
+            <div class="wc-shield">🛡️</div>
+            <h1>مرحباً بك يا بطل!</h1>
+            <p>أنت على أعتاب رحلة ستغيّر حياتك<br>بإذن الله — <strong style="color:#D4AF37;">45 يوماً</strong> نبني فيها شخصية مسلمة مؤثرة</p>
+            <div class="wc-badge">
+                <i class="fas fa-trophy"></i>
+                في نهاية الدورة ستكون بطل المستقبل
+            </div>
+        </div>
+
+        <!-- الجسم -->
+        <div class="wc-body">
+
+            <!-- Stepper -->
+            <div class="wc-stepper" id="wcStepper">
+                <div class="wc-step-item active" id="step-item-1">
+                    <div class="wc-step-circle active" id="step-circle-1">1</div>
+                    <div class="wc-step-label">هدفك</div>
+                </div>
+                <div class="wc-step-line" id="step-line-1"></div>
+                <div class="wc-step-item" id="step-item-2">
+                    <div class="wc-step-circle" id="step-circle-2">2</div>
+                    <div class="wc-step-label">موعدك</div>
+                </div>
+                <div class="wc-step-line" id="step-line-2"></div>
+                <div class="wc-step-item" id="step-item-3">
+                    <div class="wc-step-circle" id="step-circle-3">3</div>
+                    <div class="wc-step-label">انطلق!</div>
+                </div>
+            </div>
+
+            <!-- الخطوة 1: اختيار الهدف -->
+            <div class="wc-step-content visible" id="wc-step-1">
+                <p style="color:rgba(255,255,255,0.6);font-size:0.9rem;margin-bottom:18px;text-align:center;">
+                    اختر طريقة مشاركتك في حصون الإيمان
+                </p>
+                <div class="wc-options">
+                    <div class="wc-option" id="opt-course" onclick="selectMode('course')">
+                        <div class="opt-icon gold">🏆</div>
+                        <div class="opt-text">
+                            <strong>دورة حصون الإيمان المنظمة</strong>
+                            <span>45 يوماً بجدول يومي محدد — دروس تُفتح كل يوم حسب خطة التدريس</span>
+                        </div>
+                        <div class="opt-check" id="check-course"></div>
+                    </div>
+                    <div class="wc-option" id="opt-free" onclick="selectMode('free')">
+                        <div class="opt-icon green">🔍</div>
+                        <div class="opt-text">
+                            <strong>تصفح حر لجميع الكراسات</strong>
+                            <span>اقرأ ما تريد متى تريد — كل الدروس متاحة بلا قيود</span>
+                        </div>
+                        <div class="opt-check" id="check-free"></div>
+                    </div>
+                </div>
+                <button class="wc-btn-primary gold-btn" id="btn-step1-next" onclick="goToStep(2)" style="display:none;">
+                    التالي <i class="fas fa-arrow-left"></i>
+                </button>
+                <button class="wc-btn-primary green-btn" id="btn-step1-free" onclick="launchFreeMode()" style="display:none;">
+                    <i class="fas fa-rocket"></i> انطلق للتصفح الحر
+                </button>
+            </div>
+
+            <!-- الخطوة 2: اختيار التاريخ -->
+            <div class="wc-step-content" id="wc-step-2">
+                <p style="color:rgba(255,255,255,0.6);font-size:0.9rem;margin-bottom:20px;text-align:center;">
+                    متى تريد أن تبدأ رحلتك؟
+                </p>
+                <div class="wc-date-section">
+                    <div class="wc-date-label">
+                        <i class="fas fa-calendar-alt"></i>
+                        اختر تاريخ بداية الدورة
+                    </div>
+                    <input type="date" class="wc-date-picker" id="startDatePicker" onchange="onDateChange()" />
+                    <div class="wc-date-hint">
+                        <i class="fas fa-info-circle"></i>
+                        <span>الدورة <strong>45 يوماً</strong> بـ <strong>6 أيام دراسة</strong> أسبوعياً — يوم الجمعة مخصص للمراجعة والراحة. الدروس تُفتح يومياً وتبقى مفتوحة حتى نهاية الدورة.</span>
+                    </div>
+                </div>
+                <div class="wc-btn-row">
+                    <button class="wc-btn-secondary" onclick="goToStep(1)">
+                        <i class="fas fa-arrow-right"></i> رجوع
+                    </button>
+                    <button class="wc-btn-primary gold-btn" id="btn-step2-next" onclick="goToStep(3)" disabled style="flex:1;">
+                        التالي <i class="fas fa-arrow-left"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- الخطوة 3: التأكيد -->
+            <div class="wc-step-content" id="wc-step-3">
+                <p style="color:rgba(255,255,255,0.6);font-size:0.9rem;margin-bottom:18px;text-align:center;">
+                    رحلتك جاهزة! هذا ملخص دورتك:
+                </p>
+                <div class="wc-confirm-card" id="confirmSummary">
+                    <!-- تُملأ ديناميكياً -->
+                </div>
+                <div class="wc-today-lessons" id="todayLessonsPreview">
+                    <!-- تُملأ ديناميكياً -->
+                </div>
+                <div class="wc-btn-row">
+                    <button class="wc-btn-secondary" onclick="goToStep(2)">
+                        <i class="fas fa-arrow-right"></i> رجوع
+                    </button>
+                    <button class="wc-btn-primary gold-btn" onclick="launchCourseMode()" style="flex:1;">
+                        <i class="fas fa-rocket"></i> انطلق بسم الله!
+                    </button>
+                </div>
+            </div>
+
+        </div><!-- /wc-body -->
+    </div><!-- /welcomeCard -->
+</div><!-- /welcomeOverlay -->
+
+<!-- ================================================================
+     نافذة يوم الجمعة — Friday Review Modal
+     ================================================================ -->
+<div id="fridayModal">
+    <div class="friday-card">
+        <div class="friday-icon">🌙</div>
+        <h2>يوم المراجعة والراحة</h2>
+        <p>اليوم الجمعة — يوم مبارك خصصناه للمراجعة والتأمل فيما تعلمته هذا الأسبوع.</p>
+        <div class="friday-stats" id="fridayStats">
+            <!-- تُملأ ديناميكياً -->
+        </div>
+        <p style="color:#D4AF37;font-weight:700;font-size:0.95rem;">
+            💡 راجع دروس الأسبوع الماضي وأتقن ما لم تكمله
+        </p>
+        <button class="wc-btn-primary gold-btn" onclick="closeFridayModal()" style="margin-top:20px;">
+            <i class="fas fa-book-open"></i> اذهب للمراجعة
+        </button>
+    </div>
+</div>
+
+<!-- ===== شريط التنقل ===== -->
+<nav class="navbar">
+    <a class="logo" onclick="navigateTo('home')">
+        <i class="fas fa-shield-alt"></i> حصون الإيمان
+    </a>
+    <div style="display:flex;align-items:center;gap:10px;">
+        <span id="modeBadge"></span>
+        <div class="hamburger" id="hamburger">
+            <i class="fas fa-bars"></i>
+        </div>
+    </div>
+    <ul class="nav-links" id="navLinks">
+        <li><a onclick="navigateTo('home')">الرئيسية</a></li>
+        <li><a onclick="navigateTo('plan')">خطة التدريس</a></li>
+        <li><a onclick="navigateTo('courses')">الكراسات</a></li>
+        <li><a href="game.html">اللعبة</a></li>
+        <li><a onclick="resetSetup()" style="color:rgba(255,255,255,0.5);font-size:0.9rem;">⚙️ الإعدادات</a></li>
+        <li><a class="btn-nav" onclick="navigateTo('contact')">تواصل معنا</a></li>
+    </ul>
+</nav>
+
+<!-- ===== الحاوية الرئيسية ===== -->
+<div class="app-container" id="appContainer"></div>
+
+<!-- ===== التذييل ===== -->
+<footer>
+    <div class="footer-author">تأليف المادة العلمية وإعداد المنهج</div>
+    <div class="footer-title">محمد أبو عبد الرحمن — عفا الله عنه</div>
+    <div class="footer-copy">© 2026 حصون الإيمان &nbsp;·&nbsp; جميع الحقوق محفوظة</div>
+    <div class="social-links">
+        <a href="https://chat.whatsapp.com/ImbpCTYkTwHJvD9akTAIPD" title="واتساب"><i class="fab fa-whatsapp"></i></a>
+        <a href="https://t.me/+bHRjkt2DD_BmODhk" title="تليجرام"><i class="fab fa-telegram"></i></a>
+        <a href="mailto:abukora8@gmail.com" title="بريد إلكتروني"><i class="far fa-envelope"></i></a>
+    </div>
+</footer>
+
+<!-- ===== نافذة التشجيع ===== -->
+<div class="modal" id="cheerModal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <div class="stars">🌟🌟🌟🌟🌟</div>
+        <h2 id="cheerMessage">أحسنت يا بطل!</h2>
+        <p>لقد أتممت الدرس بنجاح، واصل رحلتك الإيمانية!</p>
+        <button class="modal-btn" onclick="closeModal()">ممتاز! 🚀</button>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
