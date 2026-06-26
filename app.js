@@ -861,28 +861,35 @@ const LS_SETUP_DONE = 'hosoon_setup_done';  // '1'
 // نفس المنطق الموجود في renderPlan
 
 function getPlanForDay(dayIndex) {
+    // 1. بناء قائمة مسطحة بجميع الدروس مرتبة حسب تسلسل الكراسات (الكراسة 1 ثم 2 ثم 3 ...)
     const flatLessons = [];
     courses.forEach((course) => {
         course.lessons.forEach((lesson) => {
-            flatLessons.push({ course, lesson });
+            flatLessons.push({
+                course: course,
+                lesson: lesson
+            });
         });
     });
 
-    const totalLessons = flatLessons.length;
+    const totalLessons = flatLessons.length;   // إجمالي عدد الدروس (~146 درساً)
+    const totalDays = 45;                      // المدة المستهدفة بالايام
+    const lessonsPerDay = Math.ceil(totalLessons / totalDays); // عدد الدروس اليومية (~4)
 
-    // إذا تجاوز اليوم 44، استمر في فتح الدروس المتبقية
-    if (dayIndex >= 45) {
-        const start = dayIndex * 4; // استمر بنفس المعدل
-        const end = Math.min(start + 4, totalLessons);
-        return getCoursesForRange(start, end);
-    }
-
-    // باقي الكود كما هو...
-    const lessonsPerDay = Math.ceil(totalLessons / 45);
+    // 2. تحديد نطاق الدروس التي ستُفتح اليوم
     const start = dayIndex * lessonsPerDay;
     const end = Math.min(start + lessonsPerDay, totalLessons);
-    return getCoursesForRange(start, end);
-}
+
+    // 3. استخراج الكراسات الفريدة التي تحتوي على هذه الدروس
+    const uniqueCourses = [];
+    const seenIds = new Set();
+    for (let i = start; i < end; i++) {
+        const course = flatLessons[i].course;
+        if (!seenIds.has(course.id)) {
+            seenIds.add(course.id);
+            uniqueCourses.push(course);
+        }
+    }
 
     // 4. التأكد من وجود 3 عناصر (كما يتوقع نظام العرض في الصفحة الرئيسية)
     //    إذا كان اليوم يحتوي على كراسة واحدة فقط، نكررها 3 مرات.
