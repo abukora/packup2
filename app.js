@@ -859,16 +859,19 @@ const LS_SETUP_DONE = 'hosoon_setup_done';  // '1'
 
 // خطة التدريس: 30 يوم دراسي (كل يوم 3 كراسات كما في renderPlan)
 // نفس المنطق الموجود في renderPlan
-function getPlanForDay(dayIndex) {
-    // dayIndex من 0 إلى 29 (اليوم الدراسي لا التقويمي)
-    const i = dayIndex;
-    return [
-        courses[i % courses.length],
-        courses[(i + 3) % courses.length],
-        courses[(i + 6) % courses.length]
-    ];
-}
 
+function getPlanForDay(dayIndex) {
+    let cumulative = 0;
+    for (let i = 0; i < courses.length; i++) {
+        const lessonsCount = courses[i].lessons.length;
+        const weeksNeeded = Math.ceil(lessonsCount / 6);
+        cumulative += weeksNeeded;
+        if (dayIndex < cumulative * 6) {
+            return [courses[i], courses[i], courses[i]];
+        }
+    }
+    return [courses[0], courses[0], courses[0]];
+}
 // تحويل تاريخ إلى string YYYY-MM-DD بالتوقيت المحلي
 function toLocalDateStr(date) {
     const y = date.getFullYear();
