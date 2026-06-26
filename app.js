@@ -861,26 +861,31 @@ const LS_SETUP_DONE = 'hosoon_setup_done';  // '1'
 // نفس المنطق الموجود في renderPlan
 
 function getPlanForDay(dayIndex) {
-    // 1. بناء قائمة مسطحة بجميع الدروس مرتبة حسب تسلسل الكراسات (الكراسة 1 ثم 2 ثم 3 ...)
+    // 1. بناء قائمة مسطحة بجميع الدروس مرتبة
     const flatLessons = [];
-    courses.forEach((course) => {
-        course.lessons.forEach((lesson) => {
-            flatLessons.push({
-                course: course,
-                lesson: lesson
-            });
+    courses.forEach(course => {
+        course.lessons.forEach(lesson => {
+            flatLessons.push({ course, lesson });
         });
     });
 
-    const totalLessons = flatLessons.length;   // إجمالي عدد الدروس (~146 درساً)
-    const totalDays = 45;                      // المدة المستهدفة بالايام
-    const lessonsPerDay = Math.ceil(totalLessons / totalDays); // عدد الدروس اليومية (~4)
+    const totalLessons = flatLessons.length;
 
-    // 2. تحديد نطاق الدروس التي ستُفتح اليوم
+    // 2. حساب الأيام اللازمة بمعدل 3 دروس يوميًا (مع مراعاة الجمعة)
+    const lessonsPerDay = 3; // ثابت
+    const neededDays = Math.ceil(totalLessons / lessonsPerDay); // ~44 يومًا
+    const totalDays = Math.max(neededDays, 45); // على الأقل 45 يومًا
+
+    // 3. إذا تجاوز اليوم index المدة، نعيد مصفوفة فارغة (لا مزيد من الدروس)
+    if (dayIndex >= totalDays) {
+        return [];
+    }
+
+    // 4. تحديد نطاق الدروس لهذا اليوم
     const start = dayIndex * lessonsPerDay;
     const end = Math.min(start + lessonsPerDay, totalLessons);
 
-    // 3. استخراج الكراسات الفريدة التي تحتوي على هذه الدروس
+    // 5. استخراج الكراسات الفريدة في هذا النطاق
     const uniqueCourses = [];
     const seenIds = new Set();
     for (let i = start; i < end; i++) {
@@ -891,14 +896,13 @@ function getPlanForDay(dayIndex) {
         }
     }
 
-    // 4. التأكد من وجود 3 عناصر (كما يتوقع نظام العرض في الصفحة الرئيسية)
-    //    إذا كان اليوم يحتوي على كراسة واحدة فقط، نكررها 3 مرات.
-    //    إذا كان يحتوي على كراستين، نضيف كراسة ثالثة (الأولى) لملء الفراغ.
+    // 6. التأكد من وجود 3 عناصر (لأن العرض يتوقع 3)
     while (uniqueCourses.length < 3) {
-        uniqueCourses.push(uniqueCourses[uniqueCourses.length - 1] || courses[0]);
+        // نكرر آخر كراسة أو نستخدم الأولى
+        const fallback = uniqueCourses.length > 0 ? uniqueCourses[uniqueCourses.length - 1] : courses[0];
+        uniqueCourses.push(fallback);
     }
 
-    // 5. إرجاع أول 3 كراسات فقط (لضمان عدم تجاوز العدد المطلوب)
     return uniqueCourses.slice(0, 3);
 }
 // تحويل تاريخ إلى string YYYY-MM-DD بالتوقيت المحلي
